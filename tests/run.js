@@ -30,7 +30,7 @@ let pass=0,fail=0;const ok=(n,c)=>{c?(pass++,console.log('  ✓',n)):(fail++,con
 // ── 로직 + 렌더 ──
 store.clear();MOCK_QS={};
 const sb=makeSandbox(false);
-vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception};`,sb);
+vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception,renderLogin};`,sb);
 const A=sb.__API;A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
 const evId=A.S.events[0].id;
 
@@ -152,6 +152,11 @@ if(vipEg){
 }else{
   ok('VVIP/영접대상 표본 확보',false);
 }
+
+console.log('\n[로그인 화면]');
+let loginThrew=false;
+try{A.renderLogin()}catch(e){loginThrew=true;console.log('   ✗',e.message)}
+ok('renderLogin 예외 없이 실행됨',!loginThrew);
 
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');

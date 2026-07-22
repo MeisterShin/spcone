@@ -388,13 +388,13 @@ const byId=(arr,id)=>arr.find(x=>x.id===id);
 
 // ── 1. 역할 · 권한 ──────────────────────────────────
 const ROLES={
-  admin:{name:'시스템 관리자',desc:'전체 관리·사용자 권한',color:'#6B21A8'},
-  chief:{name:'의전 총괄',desc:'행사·의전 전체 지휘',color:'#0B6E42'},
-  manager:{name:'행사 담당자',desc:'담당 행사 운영',color:'#1044A0'},
-  desk:{name:'현장 접수자',desc:'체크인·취소',color:'#92500A'},
-  greeter:{name:'영접 담당자',desc:'VVIP 도착·영접',color:'#9B1C1C'},
-  mc:{name:'사회자',desc:'확정 시나리오 조회',color:'#0F766E'},
-  viewer:{name:'상황실 조회자',desc:'대시보드 조회 전용',color:'#57534E'},
+  admin:{name:'시스템 관리자',desc:'전체 관리·사용자 권한',color:'#6B21A8',icon:'M8 1l6 3v4c0 3.5-2.5 6-6 7-3.5-1-6-3.5-6-7V4l6-3z'},
+  chief:{name:'의전 총괄',desc:'행사·의전 전체 지휘',color:'#0B6E42',icon:'M3 14h10M4 14V6l4-3 4 3v8M6 14V9M10 14V9'},
+  manager:{name:'행사 담당자',desc:'담당 행사 운영',color:'#1044A0',icon:'M8 8a3 3 0 100-6 3 3 0 000 6zM2 14c0-3 2.7-5 6-5s6 2 6 5'},
+  desk:{name:'현장 접수자',desc:'체크인·취소',color:'#92500A',icon:'M3 8l3.5 3.5L13 4'},
+  greeter:{name:'영접 담당자',desc:'VVIP 도착·영접',color:'#9B1C1C',icon:'M8 1c-2.8 0-5 2.2-5 5 0 3.5 5 9 5 9s5-5.5 5-9c0-2.8-2.2-5-5-5zM8 8a2 2 0 100-4 2 2 0 000 4z'},
+  mc:{name:'사회자',desc:'확정 시나리오 조회',color:'#0F766E',icon:'M8 1a2 2 0 00-2 2v5a2 2 0 004 0V3a2 2 0 00-2-2zM4 8a4 4 0 008 0M8 12v3M6 15h4'},
+  viewer:{name:'상황실 조회자',desc:'대시보드 조회 전용',color:'#57534E',icon:'M2 13h2v-5H2zM6 13h2V4H6zM10 13h2V8h-2z'},
 };
 const P_ALL=['dashboard','checkin','reception','guests','paste','events','order','scenario','report','stats','users',
   'checkin.do','checkin.undo','checkin.admin','reception.act','guest.edit','guest.deactivate',
@@ -624,23 +624,27 @@ function toast(msg,type='ok',undoFn){
 // ── 9. 로그인 화면 ──────────────────────────────────
 function renderLogin(){
   const shield=`<svg viewBox="0 0 16 16" fill="none"><path d="M8 1l6 3v4c0 3.5-2.5 6-6 7-3.5-1-6-3.5-6-7V4l6-3z" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/><path d="M5.5 8l1.8 1.8L11 6" stroke="#fff" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const skyline=`<svg class="login-skyline" viewBox="0 0 220 120" fill="none" aria-hidden="true"><path d="M0 110h220" stroke="#D4AF5A" stroke-width="1"/><rect x="14" y="60" width="16" height="50" fill="#D4AF5A"/><rect x="36" y="40" width="18" height="70" fill="#F3F2ED"/><rect x="60" y="70" width="14" height="40" fill="#D4AF5A"/><rect x="80" y="30" width="20" height="80" fill="#F3F2ED"/><rect x="106" y="55" width="16" height="55" fill="#D4AF5A"/><rect x="128" y="20" width="18" height="90" fill="#F3F2ED"/><rect x="152" y="65" width="14" height="45" fill="#D4AF5A"/><rect x="172" y="45" width="18" height="65" fill="#F3F2ED"/><circle cx="185" cy="20" r="8" fill="#D4AF5A"/></svg>`;
   const roleCards=Object.entries(ROLES).map(([k,r])=>`
     <button class="demo-role" data-act="login" data-role="${k}">
-      <div class="rn" style="color:${r.color}">${esc(r.name)}</div>
-      <div class="rd">${esc(r.desc)}</div>
+      <div class="ic" style="background:${r.color}22"><svg viewBox="0 0 16 16" fill="none"><path d="${r.icon}" stroke="${r.color}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="rt"><div class="rn">${esc(r.name)}</div><div class="rd">${esc(r.desc)}</div></div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>`).join('');
   $('login').innerHTML=`<div class="login-card">
+    ${skyline}
+    <div class="login-badge"><b>화성특례시</b>HWASEONG SPECIAL CITY</div>
     <div class="login-logo"><div class="mk">${shield}</div>
-      <div><div class="login-t">SPC ONE</div><div class="login-s">화성시 지능형 의전 운영 플랫폼</div></div></div>
+      <div><div class="login-t">SPC ONE</div><div class="login-t2">Smart Protocol &amp; Courtesy</div><div class="login-s">화성시 지능형 의전 운영 플랫폼</div></div></div>
     <p class="login-sub">행사 준비부터 도착·영접·소개·결과보고까지 실시간으로 연결하는 의전 지휘 플랫폼입니다.
       아래에서 <b>역할별 데모 계정</b>으로 접속하세요. 각 탭(또는 기기)을 서로 다른 역할로 열면 실시간 협업을 시연할 수 있습니다.</p>
     <div class="login-div">역할 선택 (데모 계정)</div>
     <div class="demo-roles">${roleCards}</div>
-    <label style="display:flex;align-items:center;gap:8px;margin-top:16px;font-size:12px;color:var(--gray5);cursor:pointer">
+    <label style="display:flex;align-items:center;gap:8px;margin-top:16px;font-size:12px;color:#9FB0A6;cursor:pointer;position:relative;z-index:1">
       <input type="checkbox" id="trust-dev" style="width:16px;height:16px;accent-color:var(--green)">
       이 기기 신뢰 (로그인 유지 · 오프라인 영구저장 허용) — 공용기기에서는 체크 해제</label>
-    <div style="margin-top:14px;font-size:11px;color:var(--gray4);line-height:1.6;display:flex;justify-content:space-between;align-items:center;gap:8px">
-      <span>단말: ${esc(DEV_LABEL)} · 데모 데이터는 브라우저에만 저장됩니다.</span>
+    <div class="login-foot" style="margin-top:14px;font-size:11px;color:#9FB0A6;line-height:1.6;display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <span>🔒 보안 연결 · 단말: ${esc(DEV_LABEL)} · 데모 데이터는 브라우저에만 저장됩니다.</span>
       <button class="btn btn-g btn-xs" data-act="demo-reset">데모 초기화</button></div>
   </div>`;
 }
