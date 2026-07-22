@@ -30,7 +30,7 @@ let pass=0,fail=0;const ok=(n,c)=>{c?(pass++,console.log('  ✓',n)):(fail++,con
 // ── 로직 + 렌더 ──
 store.clear();MOCK_QS={};
 const sb=makeSandbox(false);
-vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart};`,sb);
+vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration};`,sb);
 const A=sb.__API;A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
 const evId=A.S.events[0].id;
 
@@ -67,6 +67,23 @@ ok('fmtDuration 1분 미만',A.fmtDuration(30000)==='1분 미만');
 ok('fmtDuration null 처리',A.fmtDuration(null)==='—');
 ok('arrivalDistChart 빈 버킷 안내',A.arrivalDistChart({}).includes('도착 데이터 없음'));
 ok('arrivalDistChart 값 렌더',A.arrivalDistChart({'09:00':2}).includes('2명'));
+
+console.log('\n[VVIP 응대시간]');
+A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
+const vvGuest=A.S.eventGuests.find(e=>e.eventId===evId&&e.protocolLevel==='VVIP'&&e.arrivalStatus==='expected');
+if(vvGuest){
+  const checkinTime=new Date().toISOString();
+  A.S.checkinLogs.push({eventId:evId,eventGuestId:vvGuest.id,action:'checkin',createdAt:checkinTime});
+  A.S.checkinLogs.push({eventId:evId,eventGuestId:vvGuest.id,action:'reception_complete',
+    createdAt:new Date(new Date(checkinTime).getTime()+10*60000).toISOString()});
+  const rd=A.receptionDuration(evId);
+  ok('응대시간 표본 1건 이상 집계',rd.count>=1);
+  ok('응대시간 평균이 10분 이상',rd.avg>=10*60000-1000);
+}else{
+  ok('검증 가능한 VVIP 표본 확보(선행 섹션이 모두 소모하지 않음)',false);
+}
+const rdEmpty=A.receptionDuration('없는-행사-id');
+ok('표본 없으면 count 0, avg null',rdEmpty.count===0&&rdEmpty.avg===null);
 
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');

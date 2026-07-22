@@ -1461,6 +1461,18 @@ function arrivalDistChart(buckets){
     <div style="flex:1;background:var(--gray2);border-radius:4px;height:16px;overflow:hidden"><div style="height:100%;width:${buckets[k]/maxB*100}%;background:var(--green);border-radius:4px"></div></div>
     <span style="font-size:11px;color:var(--gray5);width:28px">${buckets[k]}명</span></div>`).join('')||'<p class="hint">도착 데이터 없음</p>';
 }
+function receptionDuration(evId){
+  const vv=egOf(evId).filter(g=>g.protocolLevel==='VVIP');
+  const durations=vv.map(eg=>{
+    const arr=S.checkinLogs.find(l=>l.eventGuestId===eg.id&&l.action==='checkin');
+    const rec=S.checkinLogs.find(l=>l.eventGuestId===eg.id&&l.action==='reception_complete');
+    if(!arr||!rec)return null;
+    const d=new Date(rec.createdAt).getTime()-new Date(arr.createdAt).getTime();
+    return d>=0?d:null;
+  }).filter(d=>d!==null);
+  if(!durations.length)return{count:0,avg:null,max:null};
+  return{count:durations.length,avg:durations.reduce((a,b)=>a+b,0)/durations.length,max:Math.max(...durations)};
+}
 function renderReport(){
   const ev=currentEvent();
   const right=`${eventSelector()}
