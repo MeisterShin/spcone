@@ -41,21 +41,32 @@ a{color:var(--green)}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
 
 /* ── LOGIN ────────────────────────────────────────── */
-.login-bg{position:fixed;inset:0;background:linear-gradient(135deg,#0B6E42,#064e2f 70%);display:flex;align-items:center;justify-content:center;padding:20px;z-index:400;overflow-y:auto}
-.login-card{background:var(--white);border-radius:18px;width:100%;max-width:420px;padding:34px 30px;box-shadow:0 24px 70px rgba(0,0,0,.3);margin:auto}
-.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:6px}
-.login-logo .mk{width:40px;height:40px;background:var(--green);border-radius:10px;display:flex;align-items:center;justify-content:center}
+.login-bg{position:fixed;inset:0;background:radial-gradient(circle at 80% 0%,#0f5c3a 0%,#08301f 45%,#03130b 100%);display:flex;align-items:center;justify-content:center;padding:20px;z-index:400;overflow-y:auto}
+.login-card{position:relative;overflow:hidden;background:rgba(8,42,27,.72);backdrop-filter:blur(6px);border:1px solid rgba(212,175,90,.25);border-radius:20px;width:100%;max-width:460px;padding:30px 28px;box-shadow:0 24px 70px rgba(0,0,0,.45);margin:auto;color:#F3F2ED}
+.login-skyline{position:absolute;right:-10px;top:-10px;width:220px;height:120px;opacity:.35;pointer-events:none}
+.login-badge{position:absolute;right:20px;top:18px;text-align:right;font-size:9.5px;color:#D4AF5A;letter-spacing:.04em;line-height:1.5}
+.login-badge b{display:block;font-size:11.5px;color:#F3F2ED;font-weight:800}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:6px;position:relative;z-index:1}
+.login-logo .mk{width:40px;height:40px;background:var(--green);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .login-logo .mk svg{width:22px;height:22px}
-.login-t{font-size:20px;font-weight:900;letter-spacing:-.4px}
-.login-s{font-size:12px;color:var(--gray4);margin-top:2px}
-.login-sub{font-size:12.5px;color:var(--gray5);margin:14px 0 20px;line-height:1.6}
-.demo-roles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
-.demo-role{text-align:left;padding:11px 12px;border:1px solid var(--gray3);border-radius:var(--r);background:var(--white);cursor:pointer;transition:all .12s}
-.demo-role:hover{border-color:var(--green);background:var(--green-l)}
-.demo-role .rn{font-size:13px;font-weight:800}
-.demo-role .rd{font-size:10.5px;color:var(--gray4);margin-top:2px;line-height:1.4}
-.login-div{display:flex;align-items:center;gap:10px;margin:20px 0 14px;color:var(--gray4);font-size:11px}
-.login-div::before,.login-div::after{content:'';flex:1;height:1px;background:var(--gray2)}
+.login-t{font-size:20px;font-weight:900;letter-spacing:-.4px;color:#F3F2ED}
+.login-t2{font-size:10.5px;color:#D4AF5A;letter-spacing:.08em;margin-top:1px}
+.login-s{font-size:12px;color:#B9C7BE;margin-top:2px}
+.login-sub{font-size:12.5px;color:#C7D2CB;margin:14px 0 20px;line-height:1.6;position:relative;z-index:1}
+.demo-roles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;position:relative;z-index:1}
+.demo-role{display:flex;align-items:center;gap:10px;text-align:left;padding:11px 12px;border:1px solid rgba(255,255,255,.1);border-radius:var(--r);background:rgba(255,255,255,.04);cursor:pointer;transition:all .12s}
+.demo-role:hover{border-color:#D4AF5A;background:rgba(212,175,90,.1)}
+.demo-role .ic{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.demo-role .ic svg{width:16px;height:16px}
+.demo-role .rt{flex:1;min-width:0}
+.demo-role .rn{font-size:13px;font-weight:800;color:#F3F2ED}
+.demo-role .rd{font-size:10.5px;color:#9FB0A6;margin-top:2px;line-height:1.4}
+.demo-role .arrow{color:#6B8074;flex-shrink:0}
+.login-div{display:flex;align-items:center;gap:10px;margin:20px 0 14px;color:#D4AF5A;font-size:11px;position:relative;z-index:1}
+.login-div::before,.login-div::after{content:'';flex:1;height:1px;background:rgba(212,175,90,.3)}
+.login-foot{position:relative;z-index:1}
+.login-card .btn-g{color:#C7D2CB}
+.login-card .btn-g:hover{background:rgba(255,255,255,.08);color:#fff}
 
 /* ── LAYOUT ───────────────────────────────────────── */
 .app{display:flex;height:100vh;overflow:hidden}
@@ -377,13 +388,13 @@ const byId=(arr,id)=>arr.find(x=>x.id===id);
 
 // ── 1. 역할 · 권한 ──────────────────────────────────
 const ROLES={
-  admin:{name:'시스템 관리자',desc:'전체 관리·사용자 권한',color:'#6B21A8'},
-  chief:{name:'의전 총괄',desc:'행사·의전 전체 지휘',color:'#0B6E42'},
-  manager:{name:'행사 담당자',desc:'담당 행사 운영',color:'#1044A0'},
-  desk:{name:'현장 접수자',desc:'체크인·취소',color:'#92500A'},
-  greeter:{name:'영접 담당자',desc:'VVIP 도착·영접',color:'#9B1C1C'},
-  mc:{name:'사회자',desc:'확정 시나리오 조회',color:'#0F766E'},
-  viewer:{name:'상황실 조회자',desc:'대시보드 조회 전용',color:'#57534E'},
+  admin:{name:'시스템 관리자',desc:'전체 관리·사용자 권한',color:'#6B21A8',icon:'M8 1l6 3v4c0 3.5-2.5 6-6 7-3.5-1-6-3.5-6-7V4l6-3z'},
+  chief:{name:'의전 총괄',desc:'행사·의전 전체 지휘',color:'#0B6E42',icon:'M3 14h10M4 14V6l4-3 4 3v8M6 14V9M10 14V9'},
+  manager:{name:'행사 담당자',desc:'담당 행사 운영',color:'#1044A0',icon:'M8 8a3 3 0 100-6 3 3 0 000 6zM2 14c0-3 2.7-5 6-5s6 2 6 5'},
+  desk:{name:'현장 접수자',desc:'체크인·취소',color:'#92500A',icon:'M3 8l3.5 3.5L13 4'},
+  greeter:{name:'영접 담당자',desc:'VVIP 도착·영접',color:'#9B1C1C',icon:'M8 1c-2.8 0-5 2.2-5 5 0 3.5 5 9 5 9s5-5.5 5-9c0-2.8-2.2-5-5-5zM8 8a2 2 0 100-4 2 2 0 000 4z'},
+  mc:{name:'사회자',desc:'확정 시나리오 조회',color:'#0F766E',icon:'M8 1a2 2 0 00-2 2v5a2 2 0 004 0V3a2 2 0 00-2-2zM4 8a4 4 0 008 0M8 12v3M6 15h4'},
+  viewer:{name:'상황실 조회자',desc:'대시보드 조회 전용',color:'#57534E',icon:'M2 13h2v-5H2zM6 13h2V4H6zM10 13h2V8h-2z'},
 };
 const P_ALL=['dashboard','checkin','reception','guests','paste','events','order','scenario','report','stats','users',
   'checkin.do','checkin.undo','checkin.admin','reception.act','guest.edit','guest.deactivate',
@@ -613,23 +624,27 @@ function toast(msg,type='ok',undoFn){
 // ── 9. 로그인 화면 ──────────────────────────────────
 function renderLogin(){
   const shield=`<svg viewBox="0 0 16 16" fill="none"><path d="M8 1l6 3v4c0 3.5-2.5 6-6 7-3.5-1-6-3.5-6-7V4l6-3z" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/><path d="M5.5 8l1.8 1.8L11 6" stroke="#fff" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const skyline=`<svg class="login-skyline" viewBox="0 0 220 120" fill="none" aria-hidden="true"><path d="M0 110h220" stroke="#D4AF5A" stroke-width="1"/><rect x="14" y="60" width="16" height="50" fill="#D4AF5A"/><rect x="36" y="40" width="18" height="70" fill="#F3F2ED"/><rect x="60" y="70" width="14" height="40" fill="#D4AF5A"/><rect x="80" y="30" width="20" height="80" fill="#F3F2ED"/><rect x="106" y="55" width="16" height="55" fill="#D4AF5A"/><rect x="128" y="20" width="18" height="90" fill="#F3F2ED"/><rect x="152" y="65" width="14" height="45" fill="#D4AF5A"/><rect x="172" y="45" width="18" height="65" fill="#F3F2ED"/><circle cx="185" cy="20" r="8" fill="#D4AF5A"/></svg>`;
   const roleCards=Object.entries(ROLES).map(([k,r])=>`
     <button class="demo-role" data-act="login" data-role="${k}">
-      <div class="rn" style="color:${r.color}">${esc(r.name)}</div>
-      <div class="rd">${esc(r.desc)}</div>
+      <div class="ic" style="background:${r.color}22"><svg viewBox="0 0 16 16" fill="none"><path d="${r.icon}" stroke="${r.color}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="rt"><div class="rn">${esc(r.name)}</div><div class="rd">${esc(r.desc)}</div></div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>`).join('');
   $('login').innerHTML=`<div class="login-card">
+    ${skyline}
+    <div class="login-badge"><b>화성특례시</b>HWASEONG SPECIAL CITY</div>
     <div class="login-logo"><div class="mk">${shield}</div>
-      <div><div class="login-t">SPC ONE</div><div class="login-s">화성시 지능형 의전 운영 플랫폼</div></div></div>
+      <div><div class="login-t">SPC ONE</div><div class="login-t2">Smart Protocol &amp; Courtesy</div><div class="login-s">화성시 지능형 의전 운영 플랫폼</div></div></div>
     <p class="login-sub">행사 준비부터 도착·영접·소개·결과보고까지 실시간으로 연결하는 의전 지휘 플랫폼입니다.
       아래에서 <b>역할별 데모 계정</b>으로 접속하세요. 각 탭(또는 기기)을 서로 다른 역할로 열면 실시간 협업을 시연할 수 있습니다.</p>
     <div class="login-div">역할 선택 (데모 계정)</div>
     <div class="demo-roles">${roleCards}</div>
-    <label style="display:flex;align-items:center;gap:8px;margin-top:16px;font-size:12px;color:var(--gray5);cursor:pointer">
+    <label style="display:flex;align-items:center;gap:8px;margin-top:16px;font-size:12px;color:#9FB0A6;cursor:pointer;position:relative;z-index:1">
       <input type="checkbox" id="trust-dev" style="width:16px;height:16px;accent-color:var(--green)">
       이 기기 신뢰 (로그인 유지 · 오프라인 영구저장 허용) — 공용기기에서는 체크 해제</label>
-    <div style="margin-top:14px;font-size:11px;color:var(--gray4);line-height:1.6;display:flex;justify-content:space-between;align-items:center;gap:8px">
-      <span>단말: ${esc(DEV_LABEL)} · 데모 데이터는 브라우저에만 저장됩니다.</span>
+    <div class="login-foot" style="margin-top:14px;font-size:11px;color:#9FB0A6;line-height:1.6;display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <span>🔒 보안 연결 · 단말: ${esc(DEV_LABEL)} · 데모 데이터는 브라우저에만 저장됩니다.</span>
       <button class="btn btn-g btn-xs" data-act="demo-reset">데모 초기화</button></div>
   </div>`;
 }
@@ -1000,13 +1015,14 @@ function renderReception(){
       <td data-label="차량번호">${eg.vehicleNo?`<span class="badge bg" style="font-variant-numeric:tabular-nums">🚗 ${esc(eg.vehicleNo)}</span>`:'—'}</td>
       <td data-label="영접 장소">${esc(eg.receptionLocation||'—')}</td>
       <td data-label="영접 담당">${esc(recNames)}</td>
+      <td data-label="수행원">${eg.companions&&eg.companions.length?`${eg.companions.length}명`:'—'}</td>
       <td data-label="처리" class="no-print"><div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">${actions||'—'}</div></td>
     </tr>`}).join('');
   return pageHead('VVIP 영접 관리',`${esc(ev.title)} · 영접 대상 ${list.length}명`,right)
     +`<div class="alert alert-b"><svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M7 6.5v3.5M7 4h.01" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
       <div>도착 알림에는 비공개 메모·연락처가 포함되지 않습니다. 영접 완료 처리 시 도착 상태가 <b>영접 완료</b>로 전환됩니다.</div></div>
-    <div class="card"><div class="tbl-wrap"><table class="rtbl"><thead><tr><th>내빈</th><th>예정시각</th><th>상태</th><th>차량번호</th><th>영접 장소</th><th>영접 담당</th><th class="no-print"></th></tr></thead>
-      <tbody>${rows||`<tr><td colspan="7">${emptyState('영접 대상 내빈이 없습니다')}</td></tr>`}</tbody></table></div></div>`;
+    <div class="card"><div class="tbl-wrap"><table class="rtbl"><thead><tr><th>내빈</th><th>예정시각</th><th>상태</th><th>차량번호</th><th>영접 장소</th><th>영접 담당</th><th>수행원</th><th class="no-print"></th></tr></thead>
+      <tbody>${rows||`<tr><td colspan="8">${emptyState('영접 대상 내빈이 없습니다')}</td></tr>`}</tbody></table></div></div>`;
 }
 function receptionComplete(egId){
   const eg=byId(S.eventGuests,egId);if(!eg)return;
@@ -1610,7 +1626,7 @@ function renderUsers(){
 }
 
 // ── 26. 모달 인프라 ─────────────────────────────────
-let CONFIRM_FN=null,REASON_FN=null,GUEST_EDIT=null,EG_EDIT=null,REC_EG=null,URGENT=false;
+let CONFIRM_FN=null,REASON_FN=null,GUEST_EDIT=null,EG_EDIT=null,REC_EG=null,URGENT=false,EG_COMP=[];
 function openModal(title,body,buttons,sizeCls){
   const foot=(buttons||[]).map(b=>`<button class="btn ${b.cls||'btn-s'}" data-act="${b.act}">${esc(b.label)}</button>`).join('');
   $('modal-root').innerHTML=`<div class="modal-bg open" data-act="modal-bg"><div class="modal ${sizeCls||''}">
@@ -1618,7 +1634,7 @@ function openModal(title,body,buttons,sizeCls){
       <svg width="12" height="12" viewBox="0 0 10 10" fill="none"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>
     <div class="modal-body">${body}</div>${foot?`<div class="modal-foot">${foot}</div>`:''}</div></div>`;
 }
-function closeModal(){$('modal-root').innerHTML='';CONFIRM_FN=REASON_FN=null;GUEST_EDIT=EG_EDIT=REC_EG=null;URGENT=false}
+function closeModal(){$('modal-root').innerHTML='';CONFIRM_FN=REASON_FN=null;GUEST_EDIT=EG_EDIT=REC_EG=null;URGENT=false;EG_COMP=[]}
 function openConfirm(title,msg,okLabel,fn){CONFIRM_FN=fn;
   openModal(title,`<p style="font-size:13.5px;line-height:1.7;color:var(--gray6)">${msg}</p>`,
     [{label:'취소',cls:'btn-s',act:'close'},{label:okLabel||'확인',cls:'btn-p',act:'confirm-ok'}]);}
@@ -1717,8 +1733,18 @@ function saveEvent(){
 }
 
 // ── 30. 내빈 행사설정 모달 (참석형태·영접·소개) ────
+function renderCompRows(){
+  if(!EG_COMP.length)return'<p class="hint">등록된 수행원 없음</p>';
+  return EG_COMP.map((c,i)=>`<div class="comp-row" style="display:flex;gap:6px;margin-bottom:6px">
+    <input class="inp comp-name" data-i="${i}" placeholder="이름" value="${esc(c.name)}" style="flex:1">
+    <input class="inp comp-role" data-i="${i}" placeholder="역할(비서/운전기사 등)" value="${esc(c.role)}" style="flex:1">
+    <input class="inp comp-phone" data-i="${i}" placeholder="연락처" value="${esc(c.phone)}" style="flex:1">
+    <button type="button" class="btn btn-g btn-xs" data-act="eg-comp-rm" data-i="${i}">삭제</button></div>`).join('');
+}
+function refreshCompRows(){const el=$('eg-comp-list');if(el)el.innerHTML=renderCompRows()}
 function openEgModal(id){
   const eg=byId(S.eventGuests,id);if(!eg)return;EG_EDIT=id;const g=guestOf(eg);
+  EG_COMP=(eg.companions||[]).map(c=>({...c}));
   const greeters=S.users.filter(u=>u.role==='greeter'||u.role==='manager'||u.role==='chief');
   const body=`<div class="fg">
     <div class="fl fg-full"><label>내빈</label><input class="inp" value="${esc(g.name)} · ${esc(g.org||'')} ${esc(g.pos||'')}" disabled></div>
@@ -1735,6 +1761,8 @@ function openEgModal(id){
     <div class="fl fg-full"><label><input type="checkbox" id="eg-recreq" ${eg.receptionRequired?'checked':''} style="accent-color:var(--green)"> 영접 필요</label></div>
     <div class="fl fg-full"><label>영접 담당자</label><div style="display:flex;flex-wrap:wrap;gap:8px">${greeters.map(u=>`<label style="display:flex;align-items:center;gap:5px;font-size:12px;border:1px solid var(--gray3);border-radius:6px;padding:5px 9px;cursor:pointer">
       <input type="checkbox" class="eg-rec-cb" value="${u.id}" ${eg.receptionUserIds.includes(u.id)?'checked':''} style="accent-color:var(--green)">${esc(u.name)} <span style="color:var(--gray4)">(${esc(ROLES[u.role].name)})</span></label>`).join('')}</div></div>
+    <div class="fl fg-full"><label>수행원</label><div id="eg-comp-list">${renderCompRows()}</div>
+      <button type="button" class="btn btn-g btn-xs" data-act="eg-comp-add" style="margin-top:6px">+ 수행원 추가</button></div>
     <div class="fl fg-full"><label>공개 메모</label><input class="inp" id="eg-npub" value="${esc(eg.publicNote||'')}"></div>
   </div>`;
   openModal('내빈 행사 설정',body,[{label:'취소',cls:'btn-s',act:'close'},{label:'저장',cls:'btn-p',act:'save-eg'}]);
@@ -1748,10 +1776,17 @@ function saveEg(){
   eg.vehicleNo=$('eg-veh').value.trim();eg.parkingSpot=$('eg-park').value.trim();
   eg.receptionUserIds=[...document.querySelectorAll('.eg-rec-cb:checked')].map(i=>i.value);
   eg.publicNote=$('eg-npub').value.trim();
+  eg.companions=sanitizeCompanions(EG_COMP);
   const t=$('eg-eta').value;if(t){const d=new Date();const[h,m]=t.split(':');d.setHours(+h,+m,0,0);eg.expectedArrivalAt=d.toISOString()}
   eg.version=(eg.version||1)+1;eg.updatedAt=now();
-  save(['eventGuests']);audit('eventGuest',eg.id,'update',{att:before.attendanceType,intro:before.introType},{att:eg.attendanceType,intro:eg.introType},eg.eventId);
+  save(['eventGuests']);audit('eventGuest',eg.id,'update',{att:before.attendanceType,intro:before.introType,comp:(before.companions||[]).length},{att:eg.attendanceType,intro:eg.introType,comp:eg.companions.length},eg.eventId);
   closeModal();toast('내빈 설정 저장','ok');rerender();
+}
+function addCompanion(list){return[...list,{name:'',role:'',phone:''}]}
+function removeCompanion(list,idx){return list.filter((_,i)=>i!==idx)}
+function sanitizeCompanions(list){
+  return list.map(c=>({name:(c.name||'').trim(),role:(c.role||'').trim(),phone:(c.phone||'').trim()}))
+    .filter(c=>c.name);
 }
 function openRecAssign(id){
   const eg=byId(S.eventGuests,id);if(!eg)return;REC_EG=id;
@@ -1901,6 +1936,8 @@ const ACTS={
   'sc-print':()=>printScenario(),'sc-copy':()=>copyScript(),
   'rpt-csv':()=>exportReportCSV(),'rpt-print':()=>printReport(),
   'user-toggle':el=>{const u=byId(S.users,el.dataset.id);if(!u)return;u.status=u.status==='active'?'pending':'active';save(['users']);audit('user',u.id,'status',null,{status:u.status});rerender()},
+  'eg-comp-add':()=>{EG_COMP=addCompanion(EG_COMP);refreshCompRows()},
+  'eg-comp-rm':el=>{EG_COMP=removeCompanion(EG_COMP,+el.dataset.i);refreshCompRows()},
   'stats-tab':el=>{STATS_TAB=el.dataset.tab;rerender()},
   'demo-reset':()=>resetDemo(),
   'close':()=>closeModal(),
@@ -1921,9 +1958,19 @@ document.addEventListener('click',e=>{
   if(act==='modal-bg'){if(e.target===t)closeModal();return}
   const fn=ACTS[act];if(fn){e.preventDefault();fn(t)}
 });
-document.addEventListener('input',e=>{const a=e.target.dataset.act;if(a!=='ci-search'&&a!=='g-search')return;
-  const val=e.target.value;if(a==='ci-search')CI_Q=val;else G_Q=val;rerender();
-  const n=document.querySelector(`[data-act="${a}"]`);if(n){n.focus();try{n.setSelectionRange(val.length,val.length)}catch{}}});
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.classList.contains('comp-name')||t.classList.contains('comp-role')||t.classList.contains('comp-phone')){
+    const i=+t.dataset.i;if(!EG_COMP[i])return;
+    if(t.classList.contains('comp-name'))EG_COMP[i].name=t.value;
+    else if(t.classList.contains('comp-role'))EG_COMP[i].role=t.value;
+    else EG_COMP[i].phone=t.value;
+    return;
+  }
+  const a=t.dataset.act;if(a!=='ci-search'&&a!=='g-search')return;
+  const val=t.value;if(a==='ci-search')CI_Q=val;else G_Q=val;rerender();
+  const n=document.querySelector(`[data-act="${a}"]`);if(n){n.focus();try{n.setSelectionRange(val.length,val.length)}catch{}}
+});
 document.addEventListener('change',e=>{const a=e.target.dataset.act;
   if(a==='sel-event'){SEL=e.target.value;rerender()}
   else if(a==='sc-absent'){SC_INCLUDE_ABSENT=e.target.checked;rerender()}

@@ -30,7 +30,7 @@ let pass=0,fail=0;const ok=(n,c)=>{c?(pass++,console.log('  ✓',n)):(fail++,con
 // ── 로직 + 렌더 ──
 store.clear();MOCK_QS={};
 const sb=makeSandbox(false);
-vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend};`,sb);
+vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception,renderLogin};`,sb);
 const A=sb.__API;A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
 const evId=A.S.events[0].id;
 
@@ -127,6 +127,37 @@ A.setCUR({id:'u1',role:'manager',name:'권한테스트',assignedEventIds:[evId]}
 ok('행사 2건 미만이면 추이 안내 문구 표시',A.renderStatsTrend().includes('2건 이상 필요'));
 A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
 ok('행사 2건 이상이면 추이 차트 렌더(안내 문구 없음)',!A.renderStatsTrend().includes('2건 이상 필요')&&A.renderStatsTrend().includes('<svg'));
+
+console.log('\n[수행원 배열 로직]');
+const c0=[];
+const c1=A.addCompanion(c0);
+ok('addCompanion은 원본을 바꾸지 않음',c0.length===0&&c1.length===1);
+ok('addCompanion 결과는 빈 항목',c1[0].name===''&&c1[0].role===''&&c1[0].phone==='');
+const c2=A.addCompanion(c1);
+const c3=A.removeCompanion(c2,0);
+ok('removeCompanion은 원본을 바꾸지 않음',c2.length===2&&c3.length===1);
+const dirty=[{name:'  김비서  ',role:' 비서 ',phone:'010-1111-2222'},{name:'   ',role:'운전기사',phone:''},{name:'박기사',role:'',phone:''}];
+const clean=A.sanitizeCompanions(dirty);
+ok('빈 이름 항목 제외',clean.length===2);
+ok('trim 처리됨',clean[0].name==='김비서'&&clean[0].role==='비서');
+ok('원본 배열 불변',dirty.length===3&&dirty[0].name==='  김비서  ');
+
+console.log('\n[수행원 표시]');
+A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
+const vipEg=A.S.eventGuests.find(e=>e.eventId===evId&&(e.protocolLevel==='VVIP'||e.receptionRequired));
+if(vipEg){
+  vipEg.companions=[{name:'김비서',role:'비서',phone:'010-0000-0000'}];
+  const html=A.renderReception();
+  ok('영접 관리 화면에 수행원 수 표시',html.includes('1명'));
+}else{
+  ok('VVIP/영접대상 표본 확보',false);
+}
+
+console.log('\n[로그인 화면]');
+let loginThrew=false;
+try{A.renderLogin()}catch(e){loginThrew=true;console.log('   ✗',e.message)}
+ok('renderLogin 예외 없이 실행됨',!loginThrew);
+ok('전 역할 icon 필드 보유',Object.values(A.ROLES).every(r=>typeof r.icon==='string'&&r.icon.length>0));
 
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');
