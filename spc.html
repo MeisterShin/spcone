@@ -1473,6 +1473,12 @@ function receptionDuration(evId){
   if(!durations.length)return{count:0,avg:null,max:null};
   return{count:durations.length,avg:durations.reduce((a,b)=>a+b,0)/durations.length,max:Math.max(...durations)};
 }
+function crossEventStats(){
+  return events().slice().sort((a,b)=>new Date(a.date)-new Date(b.date)).map(ev=>{
+    const d=reportData(ev.id);
+    return{ev,rate:d.active?Math.round(d.arrived/d.active*100):0,vv:d.vv,reception:receptionDuration(ev.id)};
+  });
+}
 function renderReport(){
   const ev=currentEvent();
   const right=`${eventSelector()}

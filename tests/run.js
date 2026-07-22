@@ -30,7 +30,7 @@ let pass=0,fail=0;const ok=(n,c)=>{c?(pass++,console.log('  ✓',n)):(fail++,con
 // ── 로직 + 렌더 ──
 store.clear();MOCK_QS={};
 const sb=makeSandbox(false);
-vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration};`,sb);
+vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats};`,sb);
 const A=sb.__API;A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
 const evId=A.S.events[0].id;
 
@@ -97,6 +97,16 @@ if(vvGuest){
 }
 const rdEmpty=A.receptionDuration('없는-행사-id');
 ok('표본 없으면 count 0, avg null',rdEmpty.count===0&&rdEmpty.avg===null);
+
+console.log('\n[행사간 추이]');
+const single=A.crossEventStats();
+ok('행사 1건일 때도 배열 반환',Array.isArray(single)&&single.length===1);
+const ev2Id=A.uid('e');
+A.S.events.push({id:ev2Id,title:'테스트 행사2',type:'forum',date:'2026-07-01',startTime:'10:00',endTime:'11:00',
+  status:'confirmed',managerIds:[],createdBy:'u1',createdAt:'2026-07-01T00:00:00.000Z',version:1});
+const sorted=A.crossEventStats();
+ok('날짜 오름차순 정렬',sorted.length===2&&sorted[0].ev.id===ev2Id);
+ok('rate 필드는 0~100 범위',sorted.every(r=>r.rate>=0&&r.rate<=100));
 
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');
