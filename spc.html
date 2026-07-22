@@ -41,21 +41,32 @@ a{color:var(--green)}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
 
 /* ── LOGIN ────────────────────────────────────────── */
-.login-bg{position:fixed;inset:0;background:linear-gradient(135deg,#0B6E42,#064e2f 70%);display:flex;align-items:center;justify-content:center;padding:20px;z-index:400;overflow-y:auto}
-.login-card{background:var(--white);border-radius:18px;width:100%;max-width:420px;padding:34px 30px;box-shadow:0 24px 70px rgba(0,0,0,.3);margin:auto}
-.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:6px}
-.login-logo .mk{width:40px;height:40px;background:var(--green);border-radius:10px;display:flex;align-items:center;justify-content:center}
+.login-bg{position:fixed;inset:0;background:radial-gradient(circle at 80% 0%,#0f5c3a 0%,#08301f 45%,#03130b 100%);display:flex;align-items:center;justify-content:center;padding:20px;z-index:400;overflow-y:auto}
+.login-card{position:relative;overflow:hidden;background:rgba(8,42,27,.72);backdrop-filter:blur(6px);border:1px solid rgba(212,175,90,.25);border-radius:20px;width:100%;max-width:460px;padding:30px 28px;box-shadow:0 24px 70px rgba(0,0,0,.45);margin:auto;color:#F3F2ED}
+.login-skyline{position:absolute;right:-10px;top:-10px;width:220px;height:120px;opacity:.35;pointer-events:none}
+.login-badge{position:absolute;right:20px;top:18px;text-align:right;font-size:9.5px;color:#D4AF5A;letter-spacing:.04em;line-height:1.5}
+.login-badge b{display:block;font-size:11.5px;color:#F3F2ED;font-weight:800}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:6px;position:relative;z-index:1}
+.login-logo .mk{width:40px;height:40px;background:var(--green);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .login-logo .mk svg{width:22px;height:22px}
-.login-t{font-size:20px;font-weight:900;letter-spacing:-.4px}
-.login-s{font-size:12px;color:var(--gray4);margin-top:2px}
-.login-sub{font-size:12.5px;color:var(--gray5);margin:14px 0 20px;line-height:1.6}
-.demo-roles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
-.demo-role{text-align:left;padding:11px 12px;border:1px solid var(--gray3);border-radius:var(--r);background:var(--white);cursor:pointer;transition:all .12s}
-.demo-role:hover{border-color:var(--green);background:var(--green-l)}
-.demo-role .rn{font-size:13px;font-weight:800}
-.demo-role .rd{font-size:10.5px;color:var(--gray4);margin-top:2px;line-height:1.4}
-.login-div{display:flex;align-items:center;gap:10px;margin:20px 0 14px;color:var(--gray4);font-size:11px}
-.login-div::before,.login-div::after{content:'';flex:1;height:1px;background:var(--gray2)}
+.login-t{font-size:20px;font-weight:900;letter-spacing:-.4px;color:#F3F2ED}
+.login-t2{font-size:10.5px;color:#D4AF5A;letter-spacing:.08em;margin-top:1px}
+.login-s{font-size:12px;color:#B9C7BE;margin-top:2px}
+.login-sub{font-size:12.5px;color:#C7D2CB;margin:14px 0 20px;line-height:1.6;position:relative;z-index:1}
+.demo-roles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;position:relative;z-index:1}
+.demo-role{display:flex;align-items:center;gap:10px;text-align:left;padding:11px 12px;border:1px solid rgba(255,255,255,.1);border-radius:var(--r);background:rgba(255,255,255,.04);cursor:pointer;transition:all .12s}
+.demo-role:hover{border-color:#D4AF5A;background:rgba(212,175,90,.1)}
+.demo-role .ic{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.demo-role .ic svg{width:16px;height:16px}
+.demo-role .rt{flex:1;min-width:0}
+.demo-role .rn{font-size:13px;font-weight:800;color:#F3F2ED}
+.demo-role .rd{font-size:10.5px;color:#9FB0A6;margin-top:2px;line-height:1.4}
+.demo-role .arrow{color:#6B8074;flex-shrink:0}
+.login-div{display:flex;align-items:center;gap:10px;margin:20px 0 14px;color:#D4AF5A;font-size:11px;position:relative;z-index:1}
+.login-div::before,.login-div::after{content:'';flex:1;height:1px;background:rgba(212,175,90,.3)}
+.login-foot{position:relative;z-index:1}
+.login-card .btn-g{color:#C7D2CB}
+.login-card .btn-g:hover{background:rgba(255,255,255,.08);color:#fff}
 
 /* ── LAYOUT ───────────────────────────────────────── */
 .app{display:flex;height:100vh;overflow:hidden}
