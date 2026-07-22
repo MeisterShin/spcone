@@ -157,6 +157,7 @@ console.log('\n[로그인 화면]');
 let loginThrew=false;
 try{A.renderLogin()}catch(e){loginThrew=true;console.log('   ✗',e.message)}
 ok('renderLogin 예외 없이 실행됨',!loginThrew);
+ok('전 역할 icon 필드 보유',Object.values(A.ROLES).every(r=>typeof r.icon==='string'&&r.icon.length>0));
 
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');
