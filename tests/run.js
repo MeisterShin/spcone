@@ -119,6 +119,10 @@ ok('표본 2개 미만이면 빈 문자열',A.sparkline([5],'#000')==='');
 ok('표본 2개 이상이면 SVG 반환',A.sparkline([10,20,15],'#0B6E42').startsWith('<svg'));
 ok('색상 값 반영',A.sparkline([1,2],'#ABCDEF').includes('#ABCDEF'));
 
+console.log('\n[통계 페이지]');
+A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
+ok('행사 상세 탭 기본 렌더',typeof A.PAGES.stats()==='string');
+
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');
 store.clear();MOCK_QS={};

@@ -385,21 +385,21 @@ const ROLES={
   mc:{name:'사회자',desc:'확정 시나리오 조회',color:'#0F766E'},
   viewer:{name:'상황실 조회자',desc:'대시보드 조회 전용',color:'#57534E'},
 };
-const P_ALL=['dashboard','checkin','reception','guests','paste','events','order','scenario','report','users',
+const P_ALL=['dashboard','checkin','reception','guests','paste','events','order','scenario','report','stats','users',
   'checkin.do','checkin.undo','checkin.admin','reception.act','guest.edit','guest.deactivate',
   'event.edit','event.archive','event.delete','assign','order.edit','scenario.approve','export','privateNote','demoReset'];
 const ROLE_PERMS={
   admin:new Set(P_ALL),
-  chief:new Set(['dashboard','checkin','reception','guests','paste','events','order','scenario','report',
+  chief:new Set(['dashboard','checkin','reception','guests','paste','events','order','scenario','report','stats',
     'checkin.do','checkin.undo','checkin.admin','reception.act','guest.edit','guest.deactivate',
     'event.edit','event.archive','assign','order.edit','scenario.approve','export','privateNote']),
-  manager:new Set(['dashboard','checkin','reception','guests','paste','events','order','scenario','report',
+  manager:new Set(['dashboard','checkin','reception','guests','paste','events','order','scenario','report','stats',
     'checkin.do','checkin.undo','reception.act','guest.edit','guest.deactivate',
     'event.edit','event.archive','assign','order.edit','scenario.approve','export','privateNote']),
   desk:new Set(['dashboard','checkin','checkin.do','checkin.undo']),
   greeter:new Set(['dashboard','reception','reception.act']),
   mc:new Set(['scenario']),
-  viewer:new Set(['dashboard','report']),
+  viewer:new Set(['dashboard','report','stats']),
 };
 function can(p){return CUR&&ROLE_PERMS[CUR.role]?.has(p)}
 function eventAllowed(evId){if(!CUR)return false;if(CUR.role==='admin'||CUR.role==='chief')return true;
@@ -630,6 +630,7 @@ const NAV=[
   {id:'scenario',perm:'scenario',label:'사회자 시나리오',icon:'M3 3h10v10H3zM6 6h4M6 9h4'},
   {sec:'보고 · 관리'},
   {id:'report',perm:'report',label:'결과보고',icon:'M4 2h8v12H4zM6 5h4M6 8h4M6 11h2'},
+  {id:'stats',perm:'stats',label:'통계 대시보드',icon:'M2 13h2v-5H2zM6 13h2V4H6zM10 13h2V8h-2z'},
   {id:'users',perm:'users',label:'사용자 · 권한',icon:'M8 8a3 3 0 100-6 3 3 0 000 6zM2 14c0-3 2.7-5 6-5s6 2 6 5'},
 ];
 function renderNav(){
@@ -694,7 +695,7 @@ function emptyState(msg){return`<div class="empty"><svg viewBox="0 0 24 24" fill
 
 // ── 12. 라우터 ──────────────────────────────────────
 const PAGES={dashboard:renderDash,checkin:renderCI,reception:renderReception,guests:renderGuests,
-  paste:renderPaste,events:renderEvents,order:renderOrder,scenario:renderScenario,report:renderReport,users:renderUsers};
+  paste:renderPaste,events:renderEvents,order:renderOrder,scenario:renderScenario,report:renderReport,stats:renderStats,users:renderUsers};
 function rerender(){
   if(!CUR)return;
   if(!can(NAV.find(n=>n.id===VIEW)?.perm)){VIEW=NAV.find(n=>n.id&&can(n.perm))?.id||'dashboard'}
@@ -1486,6 +1487,38 @@ function sparkline(values,color){
   const pts=values.map((v,i)=>`${(i/(values.length-1)*w).toFixed(1)},${(h-((v-min)/range*h)).toFixed(1)}`).join(' ');
   return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2"/></svg>`;
 }
+let STATS_TAB='detail';
+function renderStats(){
+  const ev=currentEvent();
+  const right=eventSelector();
+  const tabBtn=(id,label)=>`<button class="btn btn-sm ${STATS_TAB===id?'btn-p':'btn-s'}" data-act="stats-tab" data-tab="${id}">${esc(label)}</button>`;
+  const tabs=`<div style="display:flex;gap:8px;margin-bottom:16px">${tabBtn('detail','행사 상세')}${tabBtn('trend','행사간 추이')}</div>`;
+  if(STATS_TAB==='trend')return pageHead('통계 대시보드','',right)+tabs+renderStatsTrend();
+  if(!ev)return pageHead('통계 대시보드','',right)+tabs+emptyState('행사를 선택하세요');
+  return pageHead('통계 대시보드',`${esc(ev.title)} · ${esc(fmtD(ev.date))}`,right)+tabs+renderStatsDetail(ev);
+}
+function renderStatsDetail(ev){
+  const d=reportData(ev.id);const rd=receptionDuration(ev.id);
+  const rate=d.active?Math.round(d.arrived/d.active*100):0;
+  const stat=(n,l)=>`<div class="stat"><div class="stat-n">${n}</div><div class="stat-l">${esc(l)}</div></div>`;
+  return`<div class="stats">${stat(`${rate}%`,'참석률(도착/참석확정)')}${stat(d.absent,'미도착·불참')}${stat(`${d.vvArr}/${d.vv}`,'VVIP 도착')}${stat(`${rd.count}/${d.vv}`,'VVIP 응대완료')}${stat(fmtDuration(rd.avg),'평균 응대시간')}${stat(fmtDuration(rd.max),'최대 응대시간')}</div>
+    <div class="card"><div class="card-head"><h3>시간대별 도착 분포</h3></div><div class="card-body">${arrivalDistChart(d.buckets)}</div></div>`;
+}
+function renderStatsTrend(){
+  const rows=crossEventStats();
+  if(rows.length<2)return`<div class="card"><div class="card-body">${emptyState('추이를 보려면 완료된 행사가 2건 이상 필요합니다')}</div></div>`;
+  const rates=rows.map(r=>r.rate);
+  return`<div class="grid2">
+    <div class="card"><div class="card-head"><h3>행사별 참석률 추이</h3></div><div class="card-body">${sparkline(rates,'#0B6E42')}
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--gray4);margin-top:4px">${rows.map(r=>`<span>${esc(r.ev.title)}</span>`).join('')}</div></div></div>
+    <div class="card"><div class="card-head"><h3>행사별 VVIP 응대완료율</h3></div><div class="card-body">
+      ${rows.map(r=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:11px;color:var(--gray5);width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.ev.title)}</span>
+        <div style="flex:1;background:var(--gray2);border-radius:4px;height:16px;overflow:hidden"><div style="height:100%;width:${r.vv?r.reception.count/r.vv*100:0}%;background:var(--green);border-radius:4px"></div></div>
+        <span style="font-size:11px;color:var(--gray5);width:44px">${r.reception.count}/${r.vv}</span></div>`).join('')}
+    </div></div>
+  </div>`;
+}
 function renderReport(){
   const ev=currentEvent();
   const right=`${eventSelector()}
@@ -1829,6 +1862,7 @@ const ACTS={
   'sc-print':()=>printScenario(),'sc-copy':()=>copyScript(),
   'rpt-csv':()=>exportReportCSV(),'rpt-print':()=>printReport(),
   'user-toggle':el=>{const u=byId(S.users,el.dataset.id);if(!u)return;u.status=u.status==='active'?'pending':'active';save(['users']);audit('user',u.id,'status',null,{status:u.status});rerender()},
+  'stats-tab':el=>{STATS_TAB=el.dataset.tab;rerender()},
   'demo-reset':()=>resetDemo(),
   'close':()=>closeModal(),
   'modal-bg':el=>{},
