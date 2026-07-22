@@ -30,7 +30,7 @@ let pass=0,fail=0;const ok=(n,c)=>{c?(pass++,console.log('  ✓',n)):(fail++,con
 // ── 로직 + 렌더 ──
 store.clear();MOCK_QS={};
 const sb=makeSandbox(false);
-vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText};`,sb);
+vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart};`,sb);
 const A=sb.__API;A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
 const evId=A.S.events[0].id;
 
@@ -60,6 +60,13 @@ let re=0;for(const role of Object.keys(A.ROLES)){A.setCUR({id:'u',role,name:'T',
   for(const[v,fn]of Object.entries(A.PAGES)){if(!A.ROLE_PERMS[role].has(v))continue;
     try{if(typeof fn()!=='string')throw 0}catch(e){re++;console.log('   ✗',role,v,e.message||e)}}}
 ok('렌더 오류 0건',re===0);
+
+console.log('\n[통계 헬퍼]');
+ok('fmtDuration 분 단위 표기',A.fmtDuration(125000)==='2분');
+ok('fmtDuration 1분 미만',A.fmtDuration(30000)==='1분 미만');
+ok('fmtDuration null 처리',A.fmtDuration(null)==='—');
+ok('arrivalDistChart 빈 버킷 안내',A.arrivalDistChart({}).includes('도착 데이터 없음'));
+ok('arrivalDistChart 값 렌더',A.arrivalDistChart({'09:00':2}).includes('2명'));
 
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');

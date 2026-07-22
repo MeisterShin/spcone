@@ -368,6 +368,7 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 const fmt=iso=>{if(!iso)return'';const d=new Date(iso);return isNaN(d)?'':`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`};
 const fmtDT=iso=>{if(!iso)return'';const d=new Date(iso);return isNaN(d)?'':`${d.getMonth()+1}/${d.getDate()} ${fmt(iso)}`};
 const fmtD=d=>{if(!d)return'';try{return new Date(d).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'})}catch{return d}};
+const fmtDuration=ms=>{if(ms==null)return'—';const m=Math.floor(ms/60000);return m<1?'1분 미만':`${m}분`};
 const todayStr=()=>new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
 const todayISO=()=>new Date().toISOString().slice(0,10);
 const $=id=>document.getElementById(id);
@@ -1453,6 +1454,13 @@ function reportData(evId){
     arrived:arrived.length,absent:active.length-arrived.length,vv:vv.length,vvArr:vv.filter(g=>isArrived(g.arrivalStatus)).length,
     avg,buckets,edits,arrivedList:arrived.sort(sortByOrder(evId))}
 }
+function arrivalDistChart(buckets){
+  const maxB=Math.max(1,...Object.values(buckets));
+  return Object.keys(buckets).sort().map(k=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+    <span style="font-size:11px;color:var(--gray5);width:44px;font-variant-numeric:tabular-nums">${esc(k)}</span>
+    <div style="flex:1;background:var(--gray2);border-radius:4px;height:16px;overflow:hidden"><div style="height:100%;width:${buckets[k]/maxB*100}%;background:var(--green);border-radius:4px"></div></div>
+    <span style="font-size:11px;color:var(--gray5);width:28px">${buckets[k]}명</span></div>`).join('')||'<p class="hint">도착 데이터 없음</p>';
+}
 function renderReport(){
   const ev=currentEvent();
   const right=`${eventSelector()}
@@ -1461,11 +1469,7 @@ function renderReport(){
     <button class="btn btn-s btn-sm" data-act="rpt-print">PDF 인쇄</button>`;
   if(!ev)return pageHead('결과보고','',right)+emptyState('행사를 선택하세요');
   const d=reportData(ev.id);
-  const maxB=Math.max(1,...Object.values(d.buckets));
-  const chart=Object.keys(d.buckets).sort().map(k=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-    <span style="font-size:11px;color:var(--gray5);width:44px;font-variant-numeric:tabular-nums">${esc(k)}</span>
-    <div style="flex:1;background:var(--gray2);border-radius:4px;height:16px;overflow:hidden"><div style="height:100%;width:${d.buckets[k]/maxB*100}%;background:var(--green);border-radius:4px"></div></div>
-    <span style="font-size:11px;color:var(--gray5);width:28px">${d.buckets[k]}명</span></div>`).join('')||'<p class="hint">도착 데이터 없음</p>';
+  const chart=arrivalDistChart(d.buckets);
   const stat=(n,l)=>`<div class="stat"><div class="stat-n">${n}</div><div class="stat-l">${esc(l)}</div></div>`;
   const introList=d.arrivedList.map((g,i)=>{const gg=guestOf(g);
     return`<tr><td data-label="순서">${i+1}</td><td data-label="내빈">${esc(dispName(g))} ${levelBadge(g.protocolLevel)}</td>
