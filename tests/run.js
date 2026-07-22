@@ -30,7 +30,7 @@ let pass=0,fail=0;const ok=(n,c)=>{c?(pass++,console.log('  ✓',n)):(fail++,con
 // ── 로직 + 렌더 ──
 store.clear();MOCK_QS={};
 const sb=makeSandbox(false);
-vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline};`,sb);
+vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend};`,sb);
 const A=sb.__API;A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
 const evId=A.S.events[0].id;
 
@@ -122,6 +122,11 @@ ok('색상 값 반영',A.sparkline([1,2],'#ABCDEF').includes('#ABCDEF'));
 console.log('\n[통계 페이지]');
 A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
 ok('행사 상세 탭 기본 렌더',typeof A.PAGES.stats()==='string');
+
+A.setCUR({id:'u1',role:'manager',name:'권한테스트',assignedEventIds:[evId]});
+ok('행사 2건 미만이면 추이 안내 문구 표시',A.renderStatsTrend().includes('2건 이상 필요'));
+A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
+ok('행사 2건 이상이면 추이 차트 렌더(안내 문구 없음)',!A.renderStatsTrend().includes('2건 이상 필요')&&A.renderStatsTrend().includes('<svg'));
 
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');

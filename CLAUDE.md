@@ -28,7 +28,7 @@
 | 9~10 로그인·내비 | `renderLogin`,`login`,`logout`,`renderNav`,`nav` |
 | 12 라우터 | `PAGES`, `rerender()` |
 | 13 엔진 | `riskRadar`, `qualityIssues`(위험 레이더·품질 지킴이) |
-| 14~25 페이지 | 대시보드/체크인/영접/내빈/일괄등록/행사/배정/의전순서/시나리오/발표/보고/사용자 |
+| 14~25 페이지 | 대시보드/체크인/영접/내빈/일괄등록/행사/배정/의전순서/시나리오/발표/보고/통계/사용자 |
 | 15 체크인 | `doCheckin`(트랜잭션·멱등·확인단계), `undoCheckin`, `adminUndo` |
 | 20 배정 | `commitAssign` — **차이 반영 diff(유지/추가/해제), 기존 체크인 보존** |
 | 21 코파일럿 | `recommend`(근거 포함), `computeOrder` |

@@ -1474,6 +1474,7 @@ function receptionDuration(evId){
   if(!durations.length)return{count:0,avg:null,max:null};
   return{count:durations.length,avg:durations.reduce((a,b)=>a+b,0)/durations.length,max:Math.max(...durations)};
 }
+// 트렌드는 종료·보관된 행사도 포함(행사 상세 탭의 activeEvents()와 다름)
 function crossEventStats(){
   return events().slice().sort((a,b)=>new Date(a.date)-new Date(b.date)).map(ev=>{
     const d=reportData(ev.id);
@@ -1501,7 +1502,7 @@ function renderStatsDetail(ev){
   const d=reportData(ev.id);const rd=receptionDuration(ev.id);
   const rate=d.active?Math.round(d.arrived/d.active*100):0;
   const stat=(n,l)=>`<div class="stat"><div class="stat-n">${n}</div><div class="stat-l">${esc(l)}</div></div>`;
-  return`<div class="stats">${stat(`${rate}%`,'참석률(도착/참석확정)')}${stat(d.absent,'미도착·불참')}${stat(`${d.vvArr}/${d.vv}`,'VVIP 도착')}${stat(`${rd.count}/${d.vv}`,'VVIP 응대완료')}${stat(fmtDuration(rd.avg),'평균 응대시간')}${stat(fmtDuration(rd.max),'최대 응대시간')}</div>
+  return`<div class="stats">${stat(`${rate}%`,'참석률(도착/명단)')}${stat(d.absent,'미도착·불참')}${stat(`${d.vvArr}/${d.vv}`,'VVIP 도착')}${stat(`${rd.count}/${d.vv}`,'VVIP 응대완료')}${stat(fmtDuration(rd.avg),'평균 응대시간')}${stat(fmtDuration(rd.max),'최대 응대시간')}</div>
     <div class="card"><div class="card-head"><h3>시간대별 도착 분포</h3></div><div class="card-body">${arrivalDistChart(d.buckets)}</div></div>`;
 }
 function renderStatsTrend(){
