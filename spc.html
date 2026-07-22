@@ -1753,6 +1753,12 @@ function saveEg(){
   save(['eventGuests']);audit('eventGuest',eg.id,'update',{att:before.attendanceType,intro:before.introType},{att:eg.attendanceType,intro:eg.introType},eg.eventId);
   closeModal();toast('내빈 설정 저장','ok');rerender();
 }
+function addCompanion(list){return[...list,{name:'',role:'',phone:''}]}
+function removeCompanion(list,idx){return list.filter((_,i)=>i!==idx)}
+function sanitizeCompanions(list){
+  return list.map(c=>({name:(c.name||'').trim(),role:(c.role||'').trim(),phone:(c.phone||'').trim()}))
+    .filter(c=>c.name);
+}
 function openRecAssign(id){
   const eg=byId(S.eventGuests,id);if(!eg)return;REC_EG=id;
   const greeters=S.users.filter(u=>u.role==='greeter'||u.role==='manager'||u.role==='chief');
