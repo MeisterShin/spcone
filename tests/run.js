@@ -30,7 +30,7 @@ let pass=0,fail=0;const ok=(n,c)=>{c?(pass++,console.log('  ✓',n)):(fail++,con
 // ── 로직 + 렌더 ──
 store.clear();MOCK_QS={};
 const sb=makeSandbox(false);
-vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats};`,sb);
+vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline};`,sb);
 const A=sb.__API;A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
 const evId=A.S.events[0].id;
 
@@ -113,6 +113,11 @@ A.setCUR({id:'u1',role:'manager',name:'권한테스트',assignedEventIds:[evId]}
 const restrictedStats=A.crossEventStats();
 ok('manager · 할당된 행사만 반환(1개)',restrictedStats.length===1&&restrictedStats[0].ev.id===evId);
 A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
+
+console.log('\n[스파크라인]');
+ok('표본 2개 미만이면 빈 문자열',A.sparkline([5],'#000')==='');
+ok('표본 2개 이상이면 SVG 반환',A.sparkline([10,20,15],'#0B6E42').startsWith('<svg'));
+ok('색상 값 반영',A.sparkline([1,2],'#ABCDEF').includes('#ABCDEF'));
 
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');

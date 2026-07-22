@@ -1479,6 +1479,13 @@ function crossEventStats(){
     return{ev,rate:d.active?Math.round(d.arrived/d.active*100):0,vv:d.vv,reception:receptionDuration(ev.id)};
   });
 }
+function sparkline(values,color){
+  if(values.length<2)return'';
+  const w=Math.max(120,values.length*40),h=60,max=Math.max(...values,1),min=Math.min(...values,0);
+  const range=max-min||1;
+  const pts=values.map((v,i)=>`${(i/(values.length-1)*w).toFixed(1)},${(h-((v-min)/range*h)).toFixed(1)}`).join(' ');
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2"/></svg>`;
+}
 function renderReport(){
   const ev=currentEvent();
   const right=`${eventSelector()}
