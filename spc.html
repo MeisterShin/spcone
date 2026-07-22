@@ -1506,7 +1506,7 @@ function renderStatsDetail(ev){
 }
 function renderStatsTrend(){
   const rows=crossEventStats();
-  if(rows.length<2)return`<div class="card"><div class="card-body">${emptyState('추이를 보려면 완료된 행사가 2건 이상 필요합니다')}</div></div>`;
+  if(rows.length<2)return`<div class="card"><div class="card-body">${emptyState('추이를 보려면 행사가 2건 이상 필요합니다')}</div></div>`;
   const rates=rows.map(r=>r.rate);
   return`<div class="grid2">
     <div class="card"><div class="card-head"><h3>행사별 참석률 추이</h3></div><div class="card-body">${sparkline(rates,'#0B6E42')}
