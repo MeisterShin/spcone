@@ -77,8 +77,21 @@ if(vvGuest){
   A.S.checkinLogs.push({eventId:evId,eventGuestId:vvGuest.id,action:'reception_complete',
     createdAt:new Date(new Date(checkinTime).getTime()+10*60000).toISOString()});
   const rd=A.receptionDuration(evId);
-  ok('응대시간 표본 1건 이상 집계',rd.count>=1);
+  ok('응대시간 정확히 1건 집계(VVIP만)',rd.count===1);
   ok('응대시간 평균이 10분 이상',rd.avg>=10*60000-1000);
+  // VVIP 필터 검증: 非VVIP 내빈에 체크인+영접완료 로그 추가하면 집계되지 않아야 함
+  const nonVVGuest=A.S.eventGuests.find(e=>e.eventId===evId&&e.protocolLevel!=='VVIP'&&e.arrivalStatus==='expected');
+  if(nonVVGuest){
+    const checkinTime2=new Date(new Date(checkinTime).getTime()+20*60000).toISOString();
+    A.S.checkinLogs.push({eventId:evId,eventGuestId:nonVVGuest.id,action:'checkin',createdAt:checkinTime2});
+    A.S.checkinLogs.push({eventId:evId,eventGuestId:nonVVGuest.id,action:'reception_complete',
+      createdAt:new Date(new Date(checkinTime2).getTime()+5*60000).toISOString()});
+    const rd2=A.receptionDuration(evId);
+    ok('非VVIP 로그 추가해도 VVIP만 집계',rd2.count===1);
+    ok('非VVIP는 응대시간에 포함 안 됨(평균 유지)',rd2.avg>=10*60000-1000);
+  }else{
+    ok('非VVIP 표본 확보',false);
+  }
 }else{
   ok('검증 가능한 VVIP 표본 확보(선행 섹션이 모두 소모하지 않음)',false);
 }
