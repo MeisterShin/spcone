@@ -109,7 +109,6 @@ ok('날짜 오름차순 정렬',sorted.length===2&&sorted[0].ev.id===ev2Id);
 ok('rate 필드는 0~100 범위',sorted.every(r=>r.rate>=0&&r.rate<=100));
 
 // 권한 범위 필터링 회귀 테스트: manager 역할은 assignedEventIds로만 행사 볼 수 있음
-const restrictedResult=A.crossEventStats.bind(A)();
 A.setCUR({id:'u1',role:'manager',name:'권한테스트',assignedEventIds:[evId]});
 const restrictedStats=A.crossEventStats();
 ok('manager · 할당된 행사만 반환(1개)',restrictedStats.length===1&&restrictedStats[0].ev.id===evId);
