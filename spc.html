@@ -1779,7 +1779,7 @@ function saveEg(){
   eg.companions=sanitizeCompanions(EG_COMP);
   const t=$('eg-eta').value;if(t){const d=new Date();const[h,m]=t.split(':');d.setHours(+h,+m,0,0);eg.expectedArrivalAt=d.toISOString()}
   eg.version=(eg.version||1)+1;eg.updatedAt=now();
-  save(['eventGuests']);audit('eventGuest',eg.id,'update',{att:before.attendanceType,intro:before.introType},{att:eg.attendanceType,intro:eg.introType},eg.eventId);
+  save(['eventGuests']);audit('eventGuest',eg.id,'update',{att:before.attendanceType,intro:before.introType,comp:(before.companions||[]).length},{att:eg.attendanceType,intro:eg.introType,comp:eg.companions.length},eg.eventId);
   closeModal();toast('내빈 설정 저장','ok');rerender();
 }
 function addCompanion(list){return[...list,{name:'',role:'',phone:''}]}
