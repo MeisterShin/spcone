@@ -5,7 +5,7 @@
    전 역할×전 페이지 렌더, 클라우드 동기화 경로를 검증한다. */
 const fs=require('fs'),vm=require('vm'),path=require('path');
 const html=fs.readFileSync(path.join(__dirname,'..','spc.html'),'utf8');
-const js=html.match(/<script>\n'use strict'[\s\S]*?<\/script>/)[0].replace(/<\/?script>/g,'');
+const js=html.match(/<script>\r?\n'use strict'[\s\S]*?<\/script>/)[0].replace(/<\/?script>/g,'');
 
 let MOCK_QS={};const store=new Map();
 const fakeEl=()=>new Proxy({classList:{add(){},remove(){},toggle(){},contains(){return false}},style:{},dataset:{},
