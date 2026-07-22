@@ -1000,13 +1000,14 @@ function renderReception(){
       <td data-label="차량번호">${eg.vehicleNo?`<span class="badge bg" style="font-variant-numeric:tabular-nums">🚗 ${esc(eg.vehicleNo)}</span>`:'—'}</td>
       <td data-label="영접 장소">${esc(eg.receptionLocation||'—')}</td>
       <td data-label="영접 담당">${esc(recNames)}</td>
+      <td data-label="수행원">${eg.companions&&eg.companions.length?`${eg.companions.length}명`:'—'}</td>
       <td data-label="처리" class="no-print"><div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">${actions||'—'}</div></td>
     </tr>`}).join('');
   return pageHead('VVIP 영접 관리',`${esc(ev.title)} · 영접 대상 ${list.length}명`,right)
     +`<div class="alert alert-b"><svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M7 6.5v3.5M7 4h.01" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
       <div>도착 알림에는 비공개 메모·연락처가 포함되지 않습니다. 영접 완료 처리 시 도착 상태가 <b>영접 완료</b>로 전환됩니다.</div></div>
-    <div class="card"><div class="tbl-wrap"><table class="rtbl"><thead><tr><th>내빈</th><th>예정시각</th><th>상태</th><th>차량번호</th><th>영접 장소</th><th>영접 담당</th><th class="no-print"></th></tr></thead>
-      <tbody>${rows||`<tr><td colspan="7">${emptyState('영접 대상 내빈이 없습니다')}</td></tr>`}</tbody></table></div></div>`;
+    <div class="card"><div class="tbl-wrap"><table class="rtbl"><thead><tr><th>내빈</th><th>예정시각</th><th>상태</th><th>차량번호</th><th>영접 장소</th><th>영접 담당</th><th>수행원</th><th class="no-print"></th></tr></thead>
+      <tbody>${rows||`<tr><td colspan="8">${emptyState('영접 대상 내빈이 없습니다')}</td></tr>`}</tbody></table></div></div>`;
 }
 function receptionComplete(egId){
   const eg=byId(S.eventGuests,egId);if(!eg)return;
@@ -1610,7 +1611,7 @@ function renderUsers(){
 }
 
 // ── 26. 모달 인프라 ─────────────────────────────────
-let CONFIRM_FN=null,REASON_FN=null,GUEST_EDIT=null,EG_EDIT=null,REC_EG=null,URGENT=false;
+let CONFIRM_FN=null,REASON_FN=null,GUEST_EDIT=null,EG_EDIT=null,REC_EG=null,URGENT=false,EG_COMP=[];
 function openModal(title,body,buttons,sizeCls){
   const foot=(buttons||[]).map(b=>`<button class="btn ${b.cls||'btn-s'}" data-act="${b.act}">${esc(b.label)}</button>`).join('');
   $('modal-root').innerHTML=`<div class="modal-bg open" data-act="modal-bg"><div class="modal ${sizeCls||''}">
@@ -1618,7 +1619,7 @@ function openModal(title,body,buttons,sizeCls){
       <svg width="12" height="12" viewBox="0 0 10 10" fill="none"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>
     <div class="modal-body">${body}</div>${foot?`<div class="modal-foot">${foot}</div>`:''}</div></div>`;
 }
-function closeModal(){$('modal-root').innerHTML='';CONFIRM_FN=REASON_FN=null;GUEST_EDIT=EG_EDIT=REC_EG=null;URGENT=false}
+function closeModal(){$('modal-root').innerHTML='';CONFIRM_FN=REASON_FN=null;GUEST_EDIT=EG_EDIT=REC_EG=null;URGENT=false;EG_COMP=[]}
 function openConfirm(title,msg,okLabel,fn){CONFIRM_FN=fn;
   openModal(title,`<p style="font-size:13.5px;line-height:1.7;color:var(--gray6)">${msg}</p>`,
     [{label:'취소',cls:'btn-s',act:'close'},{label:okLabel||'확인',cls:'btn-p',act:'confirm-ok'}]);}
@@ -1717,8 +1718,18 @@ function saveEvent(){
 }
 
 // ── 30. 내빈 행사설정 모달 (참석형태·영접·소개) ────
+function renderCompRows(){
+  if(!EG_COMP.length)return'<p class="hint">등록된 수행원 없음</p>';
+  return EG_COMP.map((c,i)=>`<div class="comp-row" style="display:flex;gap:6px;margin-bottom:6px">
+    <input class="inp comp-name" data-i="${i}" placeholder="이름" value="${esc(c.name)}" style="flex:1">
+    <input class="inp comp-role" data-i="${i}" placeholder="역할(비서/운전기사 등)" value="${esc(c.role)}" style="flex:1">
+    <input class="inp comp-phone" data-i="${i}" placeholder="연락처" value="${esc(c.phone)}" style="flex:1">
+    <button type="button" class="btn btn-g btn-xs" data-act="eg-comp-rm" data-i="${i}">삭제</button></div>`).join('');
+}
+function refreshCompRows(){const el=$('eg-comp-list');if(el)el.innerHTML=renderCompRows()}
 function openEgModal(id){
   const eg=byId(S.eventGuests,id);if(!eg)return;EG_EDIT=id;const g=guestOf(eg);
+  EG_COMP=(eg.companions||[]).map(c=>({...c}));
   const greeters=S.users.filter(u=>u.role==='greeter'||u.role==='manager'||u.role==='chief');
   const body=`<div class="fg">
     <div class="fl fg-full"><label>내빈</label><input class="inp" value="${esc(g.name)} · ${esc(g.org||'')} ${esc(g.pos||'')}" disabled></div>
@@ -1735,6 +1746,8 @@ function openEgModal(id){
     <div class="fl fg-full"><label><input type="checkbox" id="eg-recreq" ${eg.receptionRequired?'checked':''} style="accent-color:var(--green)"> 영접 필요</label></div>
     <div class="fl fg-full"><label>영접 담당자</label><div style="display:flex;flex-wrap:wrap;gap:8px">${greeters.map(u=>`<label style="display:flex;align-items:center;gap:5px;font-size:12px;border:1px solid var(--gray3);border-radius:6px;padding:5px 9px;cursor:pointer">
       <input type="checkbox" class="eg-rec-cb" value="${u.id}" ${eg.receptionUserIds.includes(u.id)?'checked':''} style="accent-color:var(--green)">${esc(u.name)} <span style="color:var(--gray4)">(${esc(ROLES[u.role].name)})</span></label>`).join('')}</div></div>
+    <div class="fl fg-full"><label>수행원</label><div id="eg-comp-list">${renderCompRows()}</div>
+      <button type="button" class="btn btn-g btn-xs" data-act="eg-comp-add" style="margin-top:6px">+ 수행원 추가</button></div>
     <div class="fl fg-full"><label>공개 메모</label><input class="inp" id="eg-npub" value="${esc(eg.publicNote||'')}"></div>
   </div>`;
   openModal('내빈 행사 설정',body,[{label:'취소',cls:'btn-s',act:'close'},{label:'저장',cls:'btn-p',act:'save-eg'}]);
@@ -1748,6 +1761,7 @@ function saveEg(){
   eg.vehicleNo=$('eg-veh').value.trim();eg.parkingSpot=$('eg-park').value.trim();
   eg.receptionUserIds=[...document.querySelectorAll('.eg-rec-cb:checked')].map(i=>i.value);
   eg.publicNote=$('eg-npub').value.trim();
+  eg.companions=sanitizeCompanions(EG_COMP);
   const t=$('eg-eta').value;if(t){const d=new Date();const[h,m]=t.split(':');d.setHours(+h,+m,0,0);eg.expectedArrivalAt=d.toISOString()}
   eg.version=(eg.version||1)+1;eg.updatedAt=now();
   save(['eventGuests']);audit('eventGuest',eg.id,'update',{att:before.attendanceType,intro:before.introType},{att:eg.attendanceType,intro:eg.introType},eg.eventId);
@@ -1907,6 +1921,8 @@ const ACTS={
   'sc-print':()=>printScenario(),'sc-copy':()=>copyScript(),
   'rpt-csv':()=>exportReportCSV(),'rpt-print':()=>printReport(),
   'user-toggle':el=>{const u=byId(S.users,el.dataset.id);if(!u)return;u.status=u.status==='active'?'pending':'active';save(['users']);audit('user',u.id,'status',null,{status:u.status});rerender()},
+  'eg-comp-add':()=>{EG_COMP=addCompanion(EG_COMP);refreshCompRows()},
+  'eg-comp-rm':el=>{EG_COMP=removeCompanion(EG_COMP,+el.dataset.i);refreshCompRows()},
   'stats-tab':el=>{STATS_TAB=el.dataset.tab;rerender()},
   'demo-reset':()=>resetDemo(),
   'close':()=>closeModal(),
@@ -1927,9 +1943,19 @@ document.addEventListener('click',e=>{
   if(act==='modal-bg'){if(e.target===t)closeModal();return}
   const fn=ACTS[act];if(fn){e.preventDefault();fn(t)}
 });
-document.addEventListener('input',e=>{const a=e.target.dataset.act;if(a!=='ci-search'&&a!=='g-search')return;
-  const val=e.target.value;if(a==='ci-search')CI_Q=val;else G_Q=val;rerender();
-  const n=document.querySelector(`[data-act="${a}"]`);if(n){n.focus();try{n.setSelectionRange(val.length,val.length)}catch{}}});
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.classList.contains('comp-name')||t.classList.contains('comp-role')||t.classList.contains('comp-phone')){
+    const i=+t.dataset.i;if(!EG_COMP[i])return;
+    if(t.classList.contains('comp-name'))EG_COMP[i].name=t.value;
+    else if(t.classList.contains('comp-role'))EG_COMP[i].role=t.value;
+    else EG_COMP[i].phone=t.value;
+    return;
+  }
+  const a=t.dataset.act;if(a!=='ci-search'&&a!=='g-search')return;
+  const val=t.value;if(a==='ci-search')CI_Q=val;else G_Q=val;rerender();
+  const n=document.querySelector(`[data-act="${a}"]`);if(n){n.focus();try{n.setSelectionRange(val.length,val.length)}catch{}}
+});
 document.addEventListener('change',e=>{const a=e.target.dataset.act;
   if(a==='sel-event'){SEL=e.target.value;rerender()}
   else if(a==='sc-absent'){SC_INCLUDE_ABSENT=e.target.checked;rerender()}

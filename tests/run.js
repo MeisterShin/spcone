@@ -30,7 +30,7 @@ let pass=0,fail=0;const ok=(n,c)=>{c?(pass++,console.log('  ✓',n)):(fail++,con
 // ── 로직 + 렌더 ──
 store.clear();MOCK_QS={};
 const sb=makeSandbox(false);
-vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions};`,sb);
+vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception};`,sb);
 const A=sb.__API;A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
 const evId=A.S.events[0].id;
 
@@ -141,6 +141,17 @@ const clean=A.sanitizeCompanions(dirty);
 ok('빈 이름 항목 제외',clean.length===2);
 ok('trim 처리됨',clean[0].name==='김비서'&&clean[0].role==='비서');
 ok('원본 배열 불변',dirty.length===3&&dirty[0].name==='  김비서  ');
+
+console.log('\n[수행원 표시]');
+A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
+const vipEg=A.S.eventGuests.find(e=>e.eventId===evId&&(e.protocolLevel==='VVIP'||e.receptionRequired));
+if(vipEg){
+  vipEg.companions=[{name:'김비서',role:'비서',phone:'010-0000-0000'}];
+  const html=A.renderReception();
+  ok('영접 관리 화면에 수행원 수 표시',html.includes('1명'));
+}else{
+  ok('VVIP/영접대상 표본 확보',false);
+}
 
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');
