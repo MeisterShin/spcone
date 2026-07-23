@@ -2040,11 +2040,11 @@ const ACTS={
   'seat-toggle-row':el=>{if(!can('seating.edit'))return;const ev=currentEvent();if(!ev||!ev.seatConfig)return;
     const i=+el.dataset.i;const idx=ev.seatConfig.aisleRows.indexOf(i);
     if(idx===-1)ev.seatConfig.aisleRows.push(i);else ev.seatConfig.aisleRows.splice(idx,1);
-    save(['events']);rerender()},
+    save(['events']);audit('event',ev.id,'seat_aisle_toggle',null,{row:i,on:idx===-1},ev.id);rerender()},
   'seat-toggle-col':el=>{if(!can('seating.edit'))return;const ev=currentEvent();if(!ev||!ev.seatConfig)return;
     const i=+el.dataset.i;const idx=ev.seatConfig.aisleCols.indexOf(i);
     if(idx===-1)ev.seatConfig.aisleCols.push(i);else ev.seatConfig.aisleCols.splice(idx,1);
-    save(['events']);rerender()},
+    save(['events']);audit('event',ev.id,'seat_aisle_toggle',null,{col:i,on:idx===-1},ev.id);rerender()},
   'seat-auto':()=>{const ev=currentEvent();if(!ev)return;const r=autoAssignSeats(ev.id);
     toast(`추천배치 적용 완료${r.overflow?` · 배치 안 됨 ${r.overflow}명`:''}`,'ok');rerender()},
   'ord-versions':()=>showVersions(),
