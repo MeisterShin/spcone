@@ -199,8 +199,9 @@ tbody tr:hover{background:var(--gray1)}
 /* ── CHECKIN CARDS ────────────────────────────────── */
 .ci-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
 .ci-card{background:var(--white);border:1.5px solid var(--gray2);border-radius:var(--r);padding:14px;cursor:pointer;transition:all .15s;text-align:left;width:100%}
-.ci-card:hover:not(.ci-done){border-color:var(--green);box-shadow:var(--shadow);transform:translateY(-1px)}
-.ci-card:active:not(.ci-done){transform:scale(.98)}
+.ci-card:hover:not(.ci-done):not(.ci-gate-mode){border-color:var(--green);box-shadow:var(--shadow);transform:translateY(-1px)}
+.ci-card:active:not(.ci-done):not(.ci-gate-mode){transform:scale(.98)}
+.ci-card.ci-gate-mode{cursor:default}
 .ci-card.ci-done{background:var(--green-l);border-color:var(--green-b)}
 .ci-card.ci-vv{border-left:4px solid var(--red)}
 .ci-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
@@ -210,6 +211,10 @@ tbody tr:hover{background:var(--gray1)}
 .ci-done .ci-bot{border-top-color:var(--green-b)}
 .ci-time{font-size:11px;font-weight:800;color:var(--green)}
 .ci-hint{font-size:11px;color:var(--gray4)}
+.gate-row{display:flex;gap:6px;flex-wrap:wrap;padding-top:9px;border-top:1px solid var(--gray2)}
+.gate-btn{font-size:10.5px;font-weight:700;padding:5px 10px;border-radius:var(--rfull);border:1px solid var(--gray3);background:var(--white);color:var(--gray5);cursor:pointer}
+.gate-btn:hover{border-color:var(--green)}
+.gate-btn.gate-on{background:var(--green-l);border-color:var(--green-b);color:var(--green-d)}
 
 /* ── LIST ROW ─────────────────────────────────────── */
 .lrow{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--gray2)}
@@ -912,6 +917,7 @@ function renderCI(){
     <button class="btn ${DEMO_OFFLINE?'btn-w':'btn-s'} btn-sm" data-act="demo-offline">${DEMO_OFFLINE?'오프라인 해제':'오프라인 시연'}</button>
     ${can('checkin.do')?`<button class="btn btn-s btn-sm" data-act="urgent-add">긴급 내빈 추가</button>`:''}`;
   if(!ev)return pageHead('현장 체크인','',right)+emptyState('행사를 선택하세요');
+  const gates=ev.gates||[];const hasGates=gates.length>0;
   const egs=egOf(ev.id);const arr=egs.filter(g=>isArrived(g.arrivalStatus)).length;
   const pct=egs.length?Math.round(arr/egs.length*100):0;
   const q=CI_Q.toLowerCase().replace(/\s/g,'');
@@ -925,15 +931,24 @@ function renderCI(){
 
   const cards=list.map(eg=>{const g=guestOf(eg);const done=isArrived(eg.arrivalStatus);const vv=eg.protocolLevel==='VVIP';
     const dup=S.guests.filter(x=>x.isActive&&x.name===g.name).length>1;
-    return`<button class="ci-card${done?' ci-done':''}${vv?' ci-vv':''}" data-act="do-ci" data-id="${eg.id}">
-      <div class="ci-top"><div class="av av32 ${avCls(eg.protocolLevel)}">${esc(dispName(eg)[0]||'?')}</div>
+    const top=`<div class="ci-top"><div class="av av32 ${avCls(eg.protocolLevel)}">${esc(dispName(eg)[0]||'?')}</div>
         <div style="flex:1;min-width:0"><div class="ci-name">${esc(dispName(eg))} ${levelBadge(eg.protocolLevel)}${eg.attendanceType==='representative'?'<span class="badge brep">대리</span>':''}</div>
-          <div class="ci-sub">${esc(dispPos(eg))}</div><div class="ci-sub">${esc(g.org||'')}${dup?' ⚠ 동명이인':''}</div></div></div>
+          <div class="ci-sub">${esc(dispPos(eg))}</div><div class="ci-sub">${esc(g.org||'')}${dup?' ⚠ 동명이인':''}</div></div></div>`;
+    if(hasGates&&!done){
+      const gateBtns=gates.map(gt=>{const passed=!!(eg.gatesPassed&&eg.gatesPassed[gt.id]);
+        return`<button type="button" class="gate-btn ${passed?'gate-on':''}" data-act="gate-toggle" data-id="${eg.id}" data-gate="${gt.id}">${passed?'✓ ':''}${esc(gt.name)}</button>`}).join('');
+      return`<div class="ci-card ci-gate-mode${vv?' ci-vv':''}">
+        ${top}
+        <div class="gate-row">${gateBtns}</div>
+      </div>`;
+    }
+    return`<button class="ci-card${done?' ci-done':''}${vv?' ci-vv':''}" data-act="do-ci" data-id="${eg.id}">
+      ${top}
       <div class="ci-bot">${done?`<span class="ci-time">✓ ${fmt(eg.checkedInAt)}</span><span style="font-size:11px">${esc(ARR_LABEL[eg.arrivalStatus])}</span>`
         :`<span class="ci-hint">${eg.synced===false?'기기 저장됨':'탭하여 체크인'}</span>${vv?'<span style="font-size:10px;color:var(--red);font-weight:800">VVIP 확인</span>':''}`}</div>
     </button>`}).join('');
 
-  return pageHead('현장 체크인',`${esc(ev.title)}`,right)
+  return pageHead('현장 체크인',`${esc(ev.title)}${hasGates?` · 게이트 ${gates.length}개`:''}`,right)
     +`<div id="conn-box" style="margin-bottom:12px"></div>
       <div class="prog"><div class="prog-top"><span>도착</span><strong>${arr} / ${egs.length}명</strong></div>
         <div class="prog-bg"><div class="prog-fill" style="width:${pct}%"></div></div></div>
@@ -2052,6 +2067,7 @@ const ACTS={
   'demo-offline':()=>toggleDemoOffline(),
   'notif-center':()=>openNotifCenter(),
   'do-ci':el=>doCheckin(el.dataset.id),
+  'gate-toggle':el=>toggleGatePass(el.dataset.id,el.dataset.gate),
   'urgent-add':()=>openGuestModal(null,true),
   'ci-filter':el=>{CI_FILTER=el.dataset.f;rerender()},
   'rec-done':el=>receptionComplete(el.dataset.id),

@@ -30,7 +30,7 @@ let pass=0,fail=0;const ok=(n,c)=>{c?(pass++,console.log('  ✓',n)):(fail++,con
 // ── 로직 + 렌더 ──
 store.clear();MOCK_QS={};
 const sb=makeSandbox(false);
-vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception,renderLogin,seatPriorityCoords,autoAssignSeats,swapSeats,moveSeatTo,renderSeating,addGate,removeGate,sanitizeGates,toggleGatePass};`,sb);
+vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception,renderLogin,seatPriorityCoords,autoAssignSeats,swapSeats,moveSeatTo,renderSeating,addGate,removeGate,sanitizeGates,toggleGatePass,renderCI};`,sb);
 const A=sb.__API;A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
 const evId=A.S.events[0].id;
 
@@ -242,6 +242,12 @@ if(gateGuest2){
 }else{
   ok('두 번째 게이트 테스트용 미도착 내빈 확보',false);
 }
+
+console.log('\n[게이트 체크인 화면]');
+A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
+const ciHtml=A.renderCI();
+ok('게이트 있는 행사는 게이트 버튼 표시',ciHtml.includes('gate-btn'));
+ok('게이트 이름이 화면에 나타남',ciHtml.includes('주차장 입장')||ciHtml.includes('건물 입장')||ciHtml.includes('행사장 입장'));
 
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');
