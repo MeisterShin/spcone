@@ -39,8 +39,9 @@
 
 ## 데이터 모델 (컬렉션 · `S` / Firestore `spc_*`)
 `users, guests(내빈 기본), events, eventGuests(행사별 내빈), checkinLogs, scriptVersions, auditLogs, notif`.
-- `eventGuests` 핵심 필드: `arrivalStatus`(expected→en_route→arrived→reception_complete→seated→departed, 예외 absent/cancelled), `protocolLevel`(VVIP/VIP/Guest), `attendanceType`(self/representative/companion), `manualOrder`, `introType`, `receptionUserIds[]`, `receptionLocation`, **`vehicleNo`,`parkingSpot`**, `companions[{name,role,phone}]`(수행원 명단), `seat{row,col}|null`(좌석배치), `synced`, `version`.
-- `events` 핵심 필드에 `seatConfig{cols,rows,aisleRows[],aisleCols[]}`(좌석 그리드 크기·복도 행/열) 포함.
+- `eventGuests` 핵심 필드: `arrivalStatus`(expected→en_route→arrived→reception_complete→seated→departed, 예외 absent/cancelled), `protocolLevel`(VVIP/VIP/Guest), `attendanceType`(self/representative/companion), `manualOrder`, `introType`, `receptionUserIds[]`, `receptionLocation`, **`vehicleNo`,`parkingSpot`**, `companions[{name,role,phone}]`(수행원 명단), `seat{row,col}|null`(좌석배치), `gatesPassed{[gateId]:{at,by}}`(동선 게이트 통과 기록), `synced`, `version`.
+- `events` 핵심 필드에 `seatConfig{cols,rows,aisleRows[],aisleCols[]}`(좌석 그리드 크기·복도 행/열), `gates[{id,name}]`(동선 게이트 목록, 배열의 마지막 항목=최종 체크인과 동일 취급) 포함.
+- `checkinLogs.action`에 `gate_pass`/`gate_undo`(동선 게이트 통과/취소, 대시보드 활동 로그에는 노출 안 함) 포함.
 - 저장값은 영문 코드, 화면 표기는 한글(`ARR_LABEL`,`ATT_LABEL`).
 
 ## 디자인 시스템 (Notion 비즈니스 스타일)

@@ -880,7 +880,7 @@ function renderDash(){
     <div><div class="radar-msg">${esc(i.t)}</div><div class="radar-sub">${esc(i.d)}</div></div></div>`).join('')
     :`<div style="padding:20px;text-align:center;font-size:12px;color:var(--gray4)">데이터 품질 이상 없음</div>`;
 
-  const recent=[...S.checkinLogs].filter(l=>l.eventId===ev.id).reverse().slice(0,14);
+  const recent=[...S.checkinLogs].filter(l=>l.eventId===ev.id&&l.action!=='gate_pass'&&l.action!=='gate_undo').reverse().slice(0,14);
   const logHtml=recent.length?recent.map(l=>{const eg=byId(S.eventGuests,l.eventGuestId);const nm=eg?dispName(eg):'내빈';
     const act={checkin:'도착',undo:'체크인 취소',time_edit:'시각 수정',reception_complete:'영접 완료',seated:'착석',departed:'퇴장'}[l.action]||l.action;
     const type=l.action==='undo'?'warn':'ok';
