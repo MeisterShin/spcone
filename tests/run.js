@@ -249,6 +249,16 @@ const ciHtml=A.renderCI();
 ok('게이트 있는 행사는 게이트 버튼 표시',ciHtml.includes('gate-btn'));
 ok('게이트 이름이 화면에 나타남',ciHtml.includes('주차장 입장')||ciHtml.includes('건물 입장')||ciHtml.includes('행사장 입장'));
 
+console.log('\n[차량번호 마스터 상속]');
+A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
+const vehGid=A.uid('g');
+A.S.guests.push({id:vehGid,name:'차량테스트',org:'t',pos:'과장',defaultLevel:'Guest',grp:'기타',vehicleNo:'99가 9999',isActive:true,eventRelevanceDefault:1});
+const currentAssigned=A.S.eventGuests.filter(e=>e.eventId===evId&&e.arrivalStatus!=='cancelled').map(e=>({value:e.guestId}));
+MOCK_QS['.asgn-cb:checked']=currentAssigned.concat([{value:vehGid}]);
+A.setASGN(evId);A.commitAssign();
+const addedEg=A.S.eventGuests.find(e=>e.eventId===evId&&e.guestId===vehGid);
+ok('신규 배정 시 마스터 차량번호가 eventGuests.vehicleNo로 상속됨',addedEg&&addedEg.vehicleNo==='99가 9999');
+
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');
 store.clear();MOCK_QS={};

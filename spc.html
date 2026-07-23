@@ -1150,7 +1150,7 @@ function renderPaste(){
       <div class="card-body">
         <div style="margin-bottom:10px">${Object.keys(SAMPLES).map(k=>`<span class="chip" data-act="paste-sample" data-k="${k}">▶ ${k==='tab'?'탭':k==='comma'?'쉼표':'이름만'} 샘플</span>`).join('')}</div>
         <div class="paste-area"><textarea class="paste-ta" id="paste-ta" placeholder="이름  소속  직위  등급  그룹&#10;한 줄에 한 명씩 (탭 또는 쉼표 구분)"></textarea></div>
-        <p class="hint">열 순서: 이름 · 소속 · 직위 · 등급(VVIP/VIP/Guest) · 그룹. 이름만 있어도 등록됩니다. HTML·스크립트 문자열은 자동 무력화됩니다.</p>
+        <p class="hint">열 순서: 이름 · 소속 · 직위 · 등급(VVIP/VIP/Guest) · 그룹 · 차량번호(선택). 이름만 있어도 등록됩니다. HTML·스크립트 문자열은 자동 무력화됩니다.</p>
       </div></div>
       <div class="card"><div class="card-head"><h3>미리보기</h3><span id="prev-cnt" style="font-size:11px;color:var(--gray4)">대기 중</span></div>
         <div class="card-body" id="paste-preview"><div class="empty"><p>왼쪽에 명단을 붙여넣고 검증하세요</p></div></div></div>
@@ -1164,7 +1164,7 @@ function parsePaste(){
   lines.forEach(line=>{
     const sep=line.includes('\t')?'\t':',';
     const c=line.split(sep).map(x=>x.trim());
-    const[name='',org='',pos='',rawLvl='',grp='']=c;
+    const[name='',org='',pos='',rawLvl='',grp='',vehicleNo='']=c;
     const issues=[];
     if(!name){pasteRows.push({ok:false,name:line.slice(0,40),reason:'이름 없음'});return}
     if(/[<>]|script|onerror|onclick/i.test(line))issues.push('위험 문자 제거됨');
@@ -1177,13 +1177,13 @@ function parsePaste(){
     if(dupInDb)issues.push('기존 등록 중복 후보');
     const clean=v=>String(v).replace(/[<>]/g,'').slice(0,80);
     pasteRows.push({ok:true,warn:issues.length>0,skip:dupInFile,
-      name:clean(name),org:clean(org),pos:clean(pos),lvl,grp:GRP_LIST.includes(grp)?grp:'기타',issues});
+      name:clean(name),org:clean(org),pos:clean(pos),lvl,grp:GRP_LIST.includes(grp)?grp:'기타',vehicleNo:clean(vehicleNo),issues});
   });
   const ok=pasteRows.filter(r=>r.ok&&!r.skip).length,warn=pasteRows.filter(r=>r.warn&&!r.skip).length,sk=pasteRows.filter(r=>!r.ok||r.skip).length;
   $('prev-cnt').textContent=`정상 ${ok} · 주의 ${warn} · 제외 ${sk}`;
-  $('paste-preview').innerHTML=`<div class="tbl-wrap"><table class="ptbl"><thead><tr><th>이름</th><th>소속</th><th>직위</th><th>등급</th><th>비고</th></tr></thead>
+  $('paste-preview').innerHTML=`<div class="tbl-wrap"><table class="ptbl"><thead><tr><th>이름</th><th>소속</th><th>직위</th><th>등급</th><th>차량번호</th><th>비고</th></tr></thead>
     <tbody>${pasteRows.map(r=>`<tr class="${!r.ok||r.skip?'skip':r.warn?'warn':'ok'}">
-      <td>${esc(r.name)}</td><td>${esc(r.org||'—')}</td><td>${esc(r.pos||'—')}</td><td>${r.ok?esc(r.lvl):'—'}</td>
+      <td>${esc(r.name)}</td><td>${esc(r.org||'—')}</td><td>${esc(r.pos||'—')}</td><td>${r.ok?esc(r.lvl):'—'}</td><td>${esc(r.vehicleNo||'—')}</td>
       <td style="font-size:11px;color:var(--gray5)">${esc((r.reason?[r.reason]:r.issues||[]).join(', ')||'정상')}</td></tr>`).join('')}</tbody></table></div>
     <div style="margin-top:12px;display:flex;justify-content:flex-end;gap:8px">
       <button class="btn btn-p" data-act="paste-commit">정상·주의 ${ok+warn}건 등록</button></div>`;
@@ -1193,7 +1193,7 @@ function commitPaste(){
   if(!items.length){toast('등록할 항목이 없습니다','err');return}
   let added=0;
   items.forEach(r=>{S.guests.push({id:uid('g'),name:r.name,org:r.org,pos:r.pos,defaultLevel:r.lvl,grp:r.grp,
-    namePron:'',orgPron:'',publicNote:'',privateNote:'',eventRelevanceDefault:1,isActive:true,createdAt:now(),updatedAt:now()});added++});
+    namePron:'',orgPron:'',publicNote:'',privateNote:'',vehicleNo:r.vehicleNo||'',eventRelevanceDefault:1,isActive:true,createdAt:now(),updatedAt:now()});added++});
   save(['guests']);audit('guest','batch','import',null,{count:added});
   $('paste-ta').value='';pasteRows=[];
   toast(`${added}명 등록 완료`,'ok');nav('guests');
@@ -1285,7 +1285,7 @@ function commitAssign(){
     toAdd.forEach(gid=>{const g=byId(S.guests,gid);
       S.eventGuests.push({id:uid('eg'),eventId:evId,guestId:gid,invitationStatus:'confirmed',attendanceType:'self',
         repName:'',repPos:'',protocolLevel:g.defaultLevel,protocolGroup:g.grp,eventRelevance:g.eventRelevanceDefault||1,
-        manualOrder:null,introType:'individual',receptionRequired:g.defaultLevel==='VVIP',receptionUserIds:[],receptionLocation:'',vehicleNo:'',parkingSpot:'',
+        manualOrder:null,introType:'individual',receptionRequired:g.defaultLevel==='VVIP',receptionUserIds:[],receptionLocation:'',vehicleNo:g.vehicleNo||'',parkingSpot:'',
         expectedArrivalAt:'',arrivalStatus:'expected',checkedInAt:null,checkedInBy:'',checkinMethod:'',
         publicNote:g.publicNote||'',privateNote:g.privateNote||'',synced:true,version:1,createdAt:now(),updatedAt:now()})});
     // 해제: 미도착자만 (상태 cancelled로 이력 보존, 물리삭제 금지)
@@ -1815,6 +1815,7 @@ function openGuestModal(id,urgent){
     <div class="fl"><label>의전 등급</label><select class="inp inp-sel" id="g-lvl">${['VVIP','VIP','Guest'].map(l=>`<option ${g?.defaultLevel===l?'selected':''}>${l}</option>`).join('')}</select></div>
     <div class="fl"><label>기관 그룹</label><select class="inp inp-sel" id="g-grp">${GRP_LIST.map(l=>`<option ${g?.grp===l?'selected':''}>${l}</option>`).join('')}</select></div>
     ${f('이름 발음','g-pron',g?.namePron)}${f('행사 관련성(0-3)','g-rel',g?.eventRelevanceDefault??1,'number')}
+    ${f('기본 차량번호','g-veh',g?.vehicleNo)}
     <div class="fl fg-full"><label>공개 메모 (사회자·보고서 노출 가능)</label><input class="inp" id="g-npub" value="${esc(g?.publicNote||'')}"></div>
     <div class="fl fg-full"><label>비공개 메모 (총괄·담당자만 · 사회자 미노출)</label><input class="inp" id="g-npriv" value="${esc(g?.privateNote||'')}"></div>
   </div>${urgent?'<p class="hint" style="margin-top:8px">저장 시 현재 행사에 즉시 배정됩니다.</p>':''}`;
@@ -1825,6 +1826,7 @@ function saveGuest(){
   const name=$('g-name').value.trim();if(!name){toast('이름은 필수입니다','err');return}
   const d={name,org:$('g-org').value.trim(),pos:$('g-pos').value.trim(),defaultLevel:$('g-lvl').value,
     grp:$('g-grp').value,namePron:$('g-pron').value.trim(),eventRelevanceDefault:clamp(parseInt($('g-rel').value)||0,0,3),
+    vehicleNo:$('g-veh').value.trim(),
     publicNote:$('g-npub').value.trim(),privateNote:$('g-npriv').value.trim(),updatedAt:now()};
   const dup=S.guests.some(g=>g.isActive&&g.name===name&&(g.org||'')===d.org&&g.id!==GUEST_EDIT);
   const commit=()=>{
@@ -1835,7 +1837,7 @@ function saveGuest(){
     if(URGENT){const evId=currentEventId();const g=byId(S.guests,gid);
       S.eventGuests.push({id:uid('eg'),eventId:evId,guestId:gid,invitationStatus:'confirmed',attendanceType:'self',
         repName:'',repPos:'',protocolLevel:g.defaultLevel,protocolGroup:g.grp,eventRelevance:g.eventRelevanceDefault||1,
-        manualOrder:null,introType:'individual',receptionRequired:g.defaultLevel==='VVIP',receptionUserIds:[],receptionLocation:'',vehicleNo:'',parkingSpot:'',
+        manualOrder:null,introType:'individual',receptionRequired:g.defaultLevel==='VVIP',receptionUserIds:[],receptionLocation:'',vehicleNo:g.vehicleNo||'',parkingSpot:'',
         expectedArrivalAt:'',arrivalStatus:'expected',checkedInAt:null,checkedInBy:'',checkinMethod:'',
         publicNote:g.publicNote,privateNote:g.privateNote,synced:true,version:1,createdAt:now(),updatedAt:now()});
       save(['eventGuests']);audit('eventGuest','urgent','urgent_add',null,{name},evId);}
