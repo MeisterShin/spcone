@@ -30,7 +30,7 @@ let pass=0,fail=0;const ok=(n,c)=>{c?(pass++,console.log('  ✓',n)):(fail++,con
 // ── 로직 + 렌더 ──
 store.clear();MOCK_QS={};
 const sb=makeSandbox(false);
-vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception,renderLogin,seatPriorityCoords,autoAssignSeats,swapSeats,moveSeatTo,renderSeating,addGate,removeGate,sanitizeGates};`,sb);
+vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception,renderLogin,seatPriorityCoords,autoAssignSeats,swapSeats,moveSeatTo,renderSeating,addGate,removeGate,sanitizeGates,toggleGatePass};`,sb);
 const A=sb.__API;A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
 const evId=A.S.events[0].id;
 
@@ -212,6 +212,35 @@ ok('빈 이름 게이트 제외',cleanGates.length===2);
 ok('trim 처리됨',cleanGates[0].name==='주차장 입장');
 ok('원본 배열 불변',dirtyGates.length===3&&dirtyGates[0].name==='  주차장 입장  ');
 ok('시드 행사에 기본 게이트 3개 존재',A.S.events[0].gates&&A.S.events[0].gates.length===3&&A.S.events[0].gates[2].name==='행사장 입장');
+
+console.log('\n[게이트 체크인 통합]');
+A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
+const gateEvId=A.S.events[0].id;
+const gateEv=A.byId(A.S.events,gateEvId);
+gateEv.gates=[{id:'g1',name:'주차장 입장'},{id:'g2',name:'건물 입장'},{id:'g3',name:'행사장 입장'}];
+// VVIP·동명이인은 doCheckin이 확인 모달만 띄우고 즉시 도착 처리하지 않으므로
+// (모달 콜백은 이 테스트 하니스에서 실행되지 않음), 반드시 VVIP가 아닌 내빈으로 검증한다.
+const gateGuest=A.S.eventGuests.find(e=>e.eventId===gateEvId&&e.protocolLevel!=='VVIP'&&e.arrivalStatus==='expected');
+if(gateGuest){
+  A.toggleGatePass(gateGuest.id,'g1');
+  ok('일반 게이트 통과는 gatesPassed만 갱신',gateGuest.gatesPassed&&gateGuest.gatesPassed.g1&&gateGuest.arrivalStatus==='expected');
+  A.toggleGatePass(gateGuest.id,'g1');
+  ok('같은 게이트 다시 누르면 취소됨',!gateGuest.gatesPassed.g1);
+  A.toggleGatePass(gateGuest.id,'g3');
+  ok('마지막 게이트를 누르면 doCheckin이 실행되어 도착 처리됨(다른 게이트 안 눌러도)',gateGuest.arrivalStatus==='arrived');
+  ok('마지막 게이트 자체도 gatesPassed에 기록됨',gateGuest.gatesPassed.g3);
+}else{
+  ok('게이트 테스트용 미도착 내빈 확보',false);
+}
+const gateGuest2=A.S.eventGuests.find(e=>e.eventId===gateEvId&&e.protocolLevel!=='VVIP'&&e.id!==gateGuest?.id&&e.arrivalStatus==='expected');
+if(gateGuest2){
+  A.doCheckin(gateGuest2.id); // 게이트 없이 기존 방식으로 이미 도착 처리된 상태를 재현(VVIP 아니므로 확인 모달 없이 즉시 처리됨)
+  ok('doCheckin으로 실제 도착 처리됨(테스트 전제 확인)',gateGuest2.arrivalStatus==='arrived');
+  A.toggleGatePass(gateGuest2.id,'g1');
+  ok('이미 도착 처리된 내빈은 게이트 토글이 무시됨',!gateGuest2.gatesPassed||!gateGuest2.gatesPassed.g1);
+}else{
+  ok('두 번째 게이트 테스트용 미도착 내빈 확보',false);
+}
 
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');

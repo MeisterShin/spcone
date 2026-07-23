@@ -1006,6 +1006,30 @@ function adminUndo(egId){
     undoCheckin(egId,'[관리자] '+reason);
   });
 }
+function toggleGatePass(egId,gateId){
+  const eg=byId(S.eventGuests,egId);if(!eg)return;
+  if(!can('checkin.do')){toast('체크인 권한이 없습니다','err');return}
+  if(isArrived(eg.arrivalStatus))return;
+  eg.gatesPassed=eg.gatesPassed||{};
+  if(eg.gatesPassed[gateId]){
+    delete eg.gatesPassed[gateId];
+    eg.updatedAt=now();save(['eventGuests']);
+    audit('eventGuest',eg.id,'gate_undo',{gateId},null,eg.eventId);
+    rerender();return;
+  }
+  eg.gatesPassed[gateId]={at:now(),by:CUR.name};
+  eg.updatedAt=now();
+  const key=uid('k');
+  const logData={eventId:eg.eventId,eventGuestId:eg.id,action:'gate_pass',gateId,
+    previousStatus:eg.arrivalStatus,nextStatus:eg.arrivalStatus,previousTime:null,nextTime:now(),reason:'',idempotencyKey:key};
+  if(!isOnline()){const log=makeLog(logData);S.queue.push({egId:eg.id,idempotencyKey:key,log});save(['eventGuests','queue'],{silent:true})}
+  else{pushCheckinLog(logData);save(['eventGuests','checkinLogs'])}
+  audit('eventGuest',eg.id,'gate_pass',null,{gateId},eg.eventId);
+  const ev=byId(S.events,eg.eventId);const gates=ev?.gates||[];
+  const isLast=gates.length&&gates[gates.length-1].id===gateId;
+  if(isLast)doCheckin(egId);
+  else rerender();
+}
 
 // ── 16. VVIP 영접 관리 ──────────────────────────────
 function renderReception(){
