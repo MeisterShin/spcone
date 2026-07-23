@@ -30,7 +30,7 @@ let pass=0,fail=0;const ok=(n,c)=>{c?(pass++,console.log('  ✓',n)):(fail++,con
 // ── 로직 + 렌더 ──
 store.clear();MOCK_QS={};
 const sb=makeSandbox(false);
-vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception,renderLogin};`,sb);
+vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception,renderLogin,seatPriorityCoords,autoAssignSeats,swapSeats,moveSeatTo};`,sb);
 const A=sb.__API;A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
 const evId=A.S.events[0].id;
 
@@ -158,6 +158,36 @@ let loginThrew=false;
 try{A.renderLogin()}catch(e){loginThrew=true;console.log('   ✗',e.message)}
 ok('renderLogin 예외 없이 실행됨',!loginThrew);
 ok('전 역할 icon 필드 보유',Object.values(A.ROLES).every(r=>typeof r.icon==='string'&&r.icon.length>0));
+
+console.log('\n[좌석배치 로직]');
+const coords=A.seatPriorityCoords(4,3,[1],[]);
+ok('복도 행 제외',coords.every(c=>c.row!==1));
+ok('무대(0행)부터 채움',coords[0].row===0);
+ok('중앙 열 우선(0행 첫 좌표는 열 1 또는 2, 4칸 중앙 근접)',coords[0].col===1||coords[0].col===2);
+ok('전체 칸수 = (3-1)행 × 4열',coords.length===8);
+
+A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
+const seatEvId=A.S.events[0].id;
+const seatEv=A.byId(A.S.events,seatEvId);
+seatEv.seatConfig={cols:3,rows:2,aisleRows:[],aisleCols:[]};
+const before=A.S.eventGuests.filter(e=>e.eventId===seatEvId&&e.arrivalStatus!=='cancelled').length;
+const result=A.autoAssignSeats(seatEvId);
+ok('배치+초과 인원 합이 전체 인원과 일치(좌석 6개)',result.placed<=6&&result.placed+result.overflow===before);
+const seated=A.S.eventGuests.filter(e=>e.eventId===seatEvId&&e.seat);
+ok('배치된 인원만큼 seat 필드 채워짐',seated.length===result.placed);
+ok('좌표 중복 없음',new Set(seated.map(e=>`${e.seat.row}_${e.seat.col}`)).size===seated.length);
+
+const twoSeated=seated.slice(0,2);
+if(twoSeated.length===2){
+  const seatA=twoSeated[0].seat,seatB=twoSeated[1].seat;
+  A.swapSeats(seatEvId,twoSeated[0].id,twoSeated[1].id);
+  ok('swapSeats로 좌석 교환',twoSeated[0].seat.row===seatB.row&&twoSeated[0].seat.col===seatB.col&&twoSeated[1].seat.row===seatA.row&&twoSeated[1].seat.col===seatA.col);
+}
+const unseated=A.S.eventGuests.find(e=>e.eventId===seatEvId&&!e.seat);
+if(unseated){
+  A.moveSeatTo(unseated.id,0,0);
+  ok('moveSeatTo로 빈 좌석에 배치',unseated.seat&&unseated.seat.row===0&&unseated.seat.col===0);
+}
 
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');

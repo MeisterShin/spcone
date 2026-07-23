@@ -1298,6 +1298,42 @@ function computeOrder(evId){
     const ak=a.eg.manualOrder!=null?a.eg.manualOrder:1000+a.autoRank;
     const bk=b.eg.manualOrder!=null?b.eg.manualOrder:1000+b.autoRank;return ak-bk});
 }
+function seatPriorityCoords(cols,rows,aisleRows,aisleCols){
+  const ar=new Set(aisleRows||[]),ac=new Set(aisleCols||[]);
+  const centerCol=(cols-1)/2;
+  const coords=[];
+  for(let r=0;r<rows;r++){
+    if(ar.has(r))continue;
+    const colsOrder=Array.from({length:cols},(_,c)=>c).filter(c=>!ac.has(c))
+      .sort((a,b)=>Math.abs(a-centerCol)-Math.abs(b-centerCol)||a-b);
+    colsOrder.forEach(c=>coords.push({row:r,col:c}));
+  }
+  return coords;
+}
+function autoAssignSeats(evId){
+  const ev=byId(S.events,evId);if(!ev||!ev.seatConfig)return{placed:0,overflow:0};
+  const{cols,rows,aisleRows=[],aisleCols=[]}=ev.seatConfig;
+  const coords=seatPriorityCoords(cols,rows,aisleRows,aisleCols);
+  const order=computeOrder(evId).map(o=>o.eg);
+  order.forEach((eg,i)=>{eg.seat=i<coords.length?{...coords[i]}:null});
+  save(['eventGuests']);
+  const placed=Math.min(order.length,coords.length);
+  audit('event',evId,'seat_auto_assign',null,{placed,total:order.length},evId);
+  return{placed,overflow:Math.max(0,order.length-coords.length)};
+}
+function swapSeats(evId,egIdA,egIdB){
+  const a=byId(S.eventGuests,egIdA),b=byId(S.eventGuests,egIdB);
+  if(!a||!b)return;
+  const tmp=a.seat;a.seat=b.seat;b.seat=tmp;
+  save(['eventGuests']);
+  audit('eventGuest',a.id,'seat_swap',null,{with:b.id},evId);
+}
+function moveSeatTo(egId,row,col){
+  const eg=byId(S.eventGuests,egId);if(!eg)return;
+  eg.seat={row,col};
+  save(['eventGuests']);
+  audit('eventGuest',eg.id,'seat_move',null,{row,col},eg.eventId);
+}
 function renderOrder(){
   const ev=currentEvent();
   const right=`${eventSelector()}
