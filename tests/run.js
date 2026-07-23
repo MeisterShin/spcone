@@ -220,7 +220,8 @@ const gateEv=A.byId(A.S.events,gateEvId);
 gateEv.gates=[{id:'g1',name:'주차장 입장'},{id:'g2',name:'건물 입장'},{id:'g3',name:'행사장 입장'}];
 // VVIP·동명이인은 doCheckin이 확인 모달만 띄우고 즉시 도착 처리하지 않으므로
 // (모달 콜백은 이 테스트 하니스에서 실행되지 않음), 반드시 VVIP가 아닌 내빈으로 검증한다.
-const gateGuest=A.S.eventGuests.find(e=>e.eventId===gateEvId&&e.protocolLevel!=='VVIP'&&e.arrivalStatus==='expected');
+const uniqueName=e=>A.S.guests.filter(x=>x.isActive&&x.name===A.guestOf(e).name).length===1;
+const gateGuest=A.S.eventGuests.find(e=>e.eventId===gateEvId&&e.protocolLevel!=='VVIP'&&e.arrivalStatus==='expected'&&uniqueName(e));
 if(gateGuest){
   A.toggleGatePass(gateGuest.id,'g1');
   ok('일반 게이트 통과는 gatesPassed만 갱신',gateGuest.gatesPassed&&gateGuest.gatesPassed.g1&&gateGuest.arrivalStatus==='expected');
@@ -232,7 +233,7 @@ if(gateGuest){
 }else{
   ok('게이트 테스트용 미도착 내빈 확보',false);
 }
-const gateGuest2=A.S.eventGuests.find(e=>e.eventId===gateEvId&&e.protocolLevel!=='VVIP'&&e.id!==gateGuest?.id&&e.arrivalStatus==='expected');
+const gateGuest2=A.S.eventGuests.find(e=>e.eventId===gateEvId&&e.protocolLevel!=='VVIP'&&e.id!==gateGuest?.id&&e.arrivalStatus==='expected'&&uniqueName(e));
 if(gateGuest2){
   A.doCheckin(gateGuest2.id); // 게이트 없이 기존 방식으로 이미 도착 처리된 상태를 재현(VVIP 아니므로 확인 모달 없이 즉시 처리됨)
   ok('doCheckin으로 실제 도착 처리됨(테스트 전제 확인)',gateGuest2.arrivalStatus==='arrived');
