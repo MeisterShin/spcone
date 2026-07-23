@@ -599,7 +599,7 @@ function seedIfEmpty(){
   const evId=uid('e');
   S.events=[{id:evId,title:'2026 새롬시 스마트도시 국제포럼',type:'forum',date:todayISO(),startTime:'10:00',endTime:'12:00',
     loc:'새롬시청 대강당',hostDept:'새롬시 · 대한스마트시티학회',managerIds:[S.users[2].id],status:'operating',
-    desc:'스마트도시 정책 방향 공유 및 공동선언',retentionUntil:'',createdBy:S.users[1].id,createdAt:now(),updatedAt:now(),version:1}];
+    desc:'스마트도시 정책 방향 공유 및 공동선언',retentionUntil:'',seatConfig:{cols:10,rows:8,aisleRows:[3],aisleCols:[5]},createdBy:S.users[1].id,createdAt:now(),updatedAt:now(),version:1}];
   S.eventGuests=S.guests.map((gg,i)=>({id:uid('eg'),eventId:evId,guestId:gg.id,invitationStatus:'confirmed',
     attendanceType:'self',repName:'',repPos:'',protocolLevel:gg.defaultLevel,protocolGroup:gg.grp,
     eventRelevance:gg.eventRelevanceDefault,manualOrder:null,introType:'individual',
@@ -1753,6 +1753,8 @@ function openEventModal(id){
     ${f('장소','e-loc',ev?.loc)}${f('주최·주관','e-host',ev?.hostDept)}
     <div class="fl fg-full"><label>설명</label><input class="inp" id="e-desc" value="${esc(ev?.desc||'')}"></div>
     ${f('개인정보 보유기한','e-ret',ev?.retentionUntil,'date')}
+    <div class="fl"><label>좌석 가로 칸수</label><input class="inp" type="number" id="e-cols" value="${ev?.seatConfig?.cols||10}" min="1"></div>
+    <div class="fl"><label>좌석 세로 칸수</label><input class="inp" type="number" id="e-rows" value="${ev?.seatConfig?.rows||8}" min="1"></div>
   </div>`;
   GUEST_EDIT=null;EG_EDIT=id||'new-event';
   openModal(id?'행사 수정':'행사 생성',body,[{label:'취소',cls:'btn-s',act:'close'},{label:'저장',cls:'btn-p',act:'save-event'}]);
@@ -1761,12 +1763,20 @@ function openEventModal(id){
 function saveEvent(){
   const title=$('e-title').value.trim();const date=$('e-date').value;
   if(!title||!date){toast('행사명과 일자는 필수입니다','err');return}
+  const cols=clamp(parseInt($('e-cols').value)||10,1,40);
+  const rows=clamp(parseInt($('e-rows').value)||8,1,40);
   const d={title,type:$('e-type').value,date,startTime:$('e-start').value,endTime:$('e-end').value,
     loc:$('e-loc').value.trim(),hostDept:$('e-host').value.trim(),desc:$('e-desc').value.trim(),retentionUntil:$('e-ret').value,updatedAt:now()};
   const id=EG_EDIT;
-  if(id&&id!=='new-event'){const ev=byId(S.events,id);Object.assign(ev,d);ev.version=(ev.version||1)+1;audit('event',id,'update',null,d,id)}
-  else{const nid=uid('e');S.events.push({id:nid,...d,managerIds:[CUR.id],status:'confirmed',createdBy:CUR.id,createdAt:now(),version:1});
-    SEL=nid;audit('event',nid,'create',null,{title},nid)}
+  if(id&&id!=='new-event'){
+    const ev=byId(S.events,id);Object.assign(ev,d);
+    ev.seatConfig={cols,rows,aisleRows:ev.seatConfig?.aisleRows||[],aisleCols:ev.seatConfig?.aisleCols||[]};
+    ev.version=(ev.version||1)+1;audit('event',id,'update',null,d,id)
+  }else{
+    const nid=uid('e');
+    S.events.push({id:nid,...d,seatConfig:{cols,rows,aisleRows:[],aisleCols:[]},managerIds:[CUR.id],status:'confirmed',createdBy:CUR.id,createdAt:now(),version:1});
+    SEL=nid;audit('event',nid,'create',null,{title},nid)
+  }
   save(['events']);closeModal();toast('행사 저장 완료','ok');rerender();
 }
 

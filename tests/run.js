@@ -160,6 +160,7 @@ ok('renderLogin 예외 없이 실행됨',!loginThrew);
 ok('전 역할 icon 필드 보유',Object.values(A.ROLES).every(r=>typeof r.icon==='string'&&r.icon.length>0));
 
 console.log('\n[좌석배치 로직]');
+ok('시드 행사에 기본 seatConfig 존재',A.S.events[0].seatConfig&&A.S.events[0].seatConfig.cols===10&&A.S.events[0].seatConfig.rows===8);
 const coords=A.seatPriorityCoords(4,3,[1],[]);
 ok('복도 행 제외',coords.every(c=>c.row!==1));
 ok('복도 열 제외',A.seatPriorityCoords(4,3,[],[0,3]).every(c=>c.col!==0&&c.col!==3));
