@@ -1808,6 +1808,7 @@ function openNotifCenter(){
 // ── 28. 내빈 기본정보 모달 ──────────────────────────
 function openGuestModal(id,urgent){
   GUEST_EDIT=id||null;URGENT=!!urgent;const g=id?byId(S.guests,id):null;
+  GUEST_PHOTO_DRAFT=null;
   const f=(lbl,idn,val,type='text')=>`<div class="fl"><label>${lbl}</label><input class="inp" id="${idn}" value="${esc(val||'')}" ${type==='number'?'type="number"':''}></div>`;
   const body=`<div class="fg">
     <div class="fl fg-full"><label>이름 <span class="req">*</span></label><input class="inp" id="g-name" value="${esc(g?.name||'')}"></div>
@@ -1816,11 +1817,37 @@ function openGuestModal(id,urgent){
     <div class="fl"><label>기관 그룹</label><select class="inp inp-sel" id="g-grp">${GRP_LIST.map(l=>`<option ${g?.grp===l?'selected':''}>${l}</option>`).join('')}</select></div>
     ${f('이름 발음','g-pron',g?.namePron)}${f('행사 관련성(0-3)','g-rel',g?.eventRelevanceDefault??1,'number')}
     ${f('기본 차량번호','g-veh',g?.vehicleNo)}
+    <div class="fl fg-full"><label>사진</label><div style="display:flex;align-items:center;gap:10px">
+      <img id="g-photo-preview" src="${g?.photo||''}" style="width:56px;height:56px;border-radius:8px;object-fit:cover;background:var(--gray1);${g?.photo?'':'display:none'}">
+      <input type="file" accept="image/*" id="g-photo-file" data-act="g-photo-file">
+      ${g?.photo?'<button type="button" class="btn btn-g btn-xs" data-act="g-photo-rm">사진 제거</button>':''}
+    </div></div>
     <div class="fl fg-full"><label>공개 메모 (사회자·보고서 노출 가능)</label><input class="inp" id="g-npub" value="${esc(g?.publicNote||'')}"></div>
     <div class="fl fg-full"><label>비공개 메모 (총괄·담당자만 · 사회자 미노출)</label><input class="inp" id="g-npriv" value="${esc(g?.privateNote||'')}"></div>
   </div>${urgent?'<p class="hint" style="margin-top:8px">저장 시 현재 행사에 즉시 배정됩니다.</p>':''}`;
   openModal(urgent?'긴급 내빈 추가':id?'내빈 수정':'내빈 추가',body,[{label:'취소',cls:'btn-s',act:'close'},{label:'저장',cls:'btn-p',act:'save-guest'}]);
   setTimeout(()=>$('g-name')?.focus(),50);
+}
+let GUEST_PHOTO_DRAFT=null; // null=변경 없음, ''=제거, 데이터URL=신규 교체
+function resolvePhotoField(draft){return draft!==null?{photo:draft}:{}}
+function handlePhotoFile(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      const size=240;
+      const canvas=document.createElement('canvas');canvas.width=size;canvas.height=size;
+      const ctx=canvas.getContext('2d');
+      const scale=Math.max(size/img.width,size/img.height);
+      const w=img.width*scale,h=img.height*scale;
+      ctx.drawImage(img,(size-w)/2,(size-h)/2,w,h);
+      GUEST_PHOTO_DRAFT=canvas.toDataURL('image/jpeg',0.75);
+      const prev=$('g-photo-preview');if(prev){prev.src=GUEST_PHOTO_DRAFT;prev.style.display=''}
+    };
+    img.src=reader.result;
+  };
+  reader.readAsDataURL(file);
 }
 function saveGuest(){
   const name=$('g-name').value.trim();if(!name){toast('이름은 필수입니다','err');return}
@@ -1828,6 +1855,7 @@ function saveGuest(){
     grp:$('g-grp').value,namePron:$('g-pron').value.trim(),eventRelevanceDefault:clamp(parseInt($('g-rel').value)||0,0,3),
     vehicleNo:$('g-veh').value.trim(),
     publicNote:$('g-npub').value.trim(),privateNote:$('g-npriv').value.trim(),updatedAt:now()};
+  if(GUEST_PHOTO_DRAFT!==null)Object.assign(d,resolvePhotoField(GUEST_PHOTO_DRAFT));
   const dup=S.guests.some(g=>g.isActive&&g.name===name&&(g.org||'')===d.org&&g.id!==GUEST_EDIT);
   const commit=()=>{
     let gid=GUEST_EDIT;
@@ -2067,6 +2095,7 @@ const ACTS={
   'toggle-sb':()=>toggleSB(),
   'nav':el=>nav(el.dataset.view),
   'demo-offline':()=>toggleDemoOffline(),
+  'g-photo-rm':()=>{GUEST_PHOTO_DRAFT='';const prev=$('g-photo-preview');if(prev){prev.src='';prev.style.display='none'}},
   'notif-center':()=>openNotifCenter(),
   'do-ci':el=>doCheckin(el.dataset.id),
   'gate-toggle':el=>toggleGatePass(el.dataset.id,el.dataset.gate),
@@ -2162,7 +2191,8 @@ document.addEventListener('input',e=>{
 document.addEventListener('change',e=>{const a=e.target.dataset.act;
   if(a==='sel-event'){SEL=e.target.value;rerender()}
   else if(a==='sc-absent'){SC_INCLUDE_ABSENT=e.target.checked;rerender()}
-  else if(a==='rpt-privacy'){RPT_PRIVACY=e.target.checked;rerender()}});
+  else if(a==='rpt-privacy'){RPT_PRIVACY=e.target.checked;rerender()}
+  else if(a==='g-photo-file'){handlePhotoFile(e.target.files[0])}});
 
 // ── 33. 초기화 ──────────────────────────────────────
 function bootApp(){

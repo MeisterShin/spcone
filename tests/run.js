@@ -30,7 +30,7 @@ let pass=0,fail=0;const ok=(n,c)=>{c?(pass++,console.log('  ✓',n)):(fail++,con
 // ── 로직 + 렌더 ──
 store.clear();MOCK_QS={};
 const sb=makeSandbox(false);
-vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception,renderLogin,seatPriorityCoords,autoAssignSeats,swapSeats,moveSeatTo,renderSeating,addGate,removeGate,sanitizeGates,toggleGatePass,renderCI};`,sb);
+vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception,renderLogin,seatPriorityCoords,autoAssignSeats,swapSeats,moveSeatTo,renderSeating,addGate,removeGate,sanitizeGates,toggleGatePass,renderCI,resolvePhotoField};`,sb);
 const A=sb.__API;A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
 const evId=A.S.events[0].id;
 
@@ -258,6 +258,11 @@ MOCK_QS['.asgn-cb:checked']=currentAssigned.concat([{value:vehGid}]);
 A.setASGN(evId);A.commitAssign();
 const addedEg=A.S.eventGuests.find(e=>e.eventId===evId&&e.guestId===vehGid);
 ok('신규 배정 시 마스터 차량번호가 eventGuests.vehicleNo로 상속됨',addedEg&&addedEg.vehicleNo==='99가 9999');
+
+console.log('\n[사진 저장 로직]');
+ok('변경 없음(null)이면 photo 키 자체가 없음',Object.keys(A.resolvePhotoField(null)).length===0);
+ok('제거(빈 문자열)면 {photo:\'\'}',A.resolvePhotoField('').photo==='');
+ok('신규 교체(데이터URL)면 그 값 그대로',A.resolvePhotoField('data:image/jpeg;base64,xyz').photo==='data:image/jpeg;base64,xyz');
 
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');
