@@ -773,6 +773,7 @@ function rerender(){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('on',b.dataset.view===VIEW));
   renderNav();
   if(VIEW==='order')initOrderDnD();
+  if(VIEW==='seating')initSeatDnD();
 }
 
 // ── 13. 위험 레이더 · 품질 지킴이 (엔진) ────────────
@@ -1419,6 +1420,7 @@ function renderOrder(){
       <div class="card-body" id="ord-list">${cards||emptyState('배정된 내빈이 없습니다')}</div></div>`;
 }
 let dragEg=null;
+let dragSeatEg=null;
 function initOrderDnD(){
   document.querySelectorAll('#ord-list .ord-card').forEach(card=>{
     card.addEventListener('dragstart',()=>{dragEg=card.dataset.eg;card.classList.add('dragging')});
@@ -1427,6 +1429,21 @@ function initOrderDnD(){
     card.addEventListener('dragleave',()=>card.classList.remove('over'));
     card.addEventListener('drop',e=>{e.preventDefault();if(!dragEg||dragEg===card.dataset.eg)return;
       reorderEg(dragEg,card.dataset.eg)});
+  });
+}
+function initSeatDnD(){
+  document.querySelectorAll('.seat-cell[data-row]').forEach(cell=>{
+    if(cell.classList.contains('seat-occ')){
+      cell.addEventListener('dragstart',()=>{dragSeatEg=cell.dataset.eg;cell.classList.add('dragging')});
+      cell.addEventListener('dragend',()=>{cell.classList.remove('dragging');document.querySelectorAll('.seat-cell').forEach(c=>c.classList.remove('over'))});
+    }
+    cell.addEventListener('dragover',e=>{e.preventDefault();cell.classList.add('over')});
+    cell.addEventListener('dragleave',()=>cell.classList.remove('over'));
+    cell.addEventListener('drop',e=>{e.preventDefault();if(!dragSeatEg)return;
+      const targetEg=cell.dataset.eg;
+      if(targetEg&&targetEg!==dragSeatEg)swapSeats(currentEventId(),dragSeatEg,targetEg);
+      else if(!targetEg)moveSeatTo(dragSeatEg,+cell.dataset.row,+cell.dataset.col);
+      dragSeatEg=null;rerender()});
   });
 }
 function currentOrderIds(){return computeOrder(currentEventId()).map(o=>o.eg.id)}
