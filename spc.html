@@ -910,11 +910,12 @@ function sortByOrder(evId){const ranked=computeOrder(evId);const idx={};ranked.f
   return(a,b)=>(idx[a.id]??999)-(idx[b.id]??999)}
 
 // ── 15. 현장 체크인 ─────────────────────────────────
-let CI_FILTER='all',CI_Q='';
+let CI_FILTER='all',CI_Q='',CI_SHOW_PHOTO=false;
 function renderCI(){
   const ev=currentEvent();
   const right=`${eventSelector()}
     <button class="btn ${DEMO_OFFLINE?'btn-w':'btn-s'} btn-sm" data-act="demo-offline">${DEMO_OFFLINE?'오프라인 해제':'오프라인 시연'}</button>
+    <button class="btn ${CI_SHOW_PHOTO?'btn-w':'btn-s'} btn-sm" data-act="ci-toggle-photo">${CI_SHOW_PHOTO?'사진 숨기기':'VIP 사진 표시'}</button>
     ${can('checkin.do')?`<button class="btn btn-s btn-sm" data-act="urgent-add">긴급 내빈 추가</button>`:''}`;
   if(!ev)return pageHead('현장 체크인','',right)+emptyState('행사를 선택하세요');
   const gates=ev.gates||[];const hasGates=gates.length>0;
@@ -931,7 +932,9 @@ function renderCI(){
 
   const cards=list.map(eg=>{const g=guestOf(eg);const done=isArrived(eg.arrivalStatus);const vv=eg.protocolLevel==='VVIP';
     const dup=S.guests.filter(x=>x.isActive&&x.name===g.name).length>1;
-    const top=`<div class="ci-top"><div class="av av32 ${avCls(eg.protocolLevel)}">${esc(dispName(eg)[0]||'?')}</div>
+    const showPhoto=CI_SHOW_PHOTO&&(eg.protocolLevel==='VVIP'||eg.protocolLevel==='VIP')&&g.photo;
+    const avatarHtml=showPhoto?`<img class="av av32" src="${g.photo}" style="object-fit:cover">`:`<div class="av av32 ${avCls(eg.protocolLevel)}">${esc(dispName(eg)[0]||'?')}</div>`;
+    const top=`<div class="ci-top">${avatarHtml}
         <div style="flex:1;min-width:0"><div class="ci-name">${esc(dispName(eg))} ${levelBadge(eg.protocolLevel)}${eg.attendanceType==='representative'?'<span class="badge brep">대리</span>':''}</div>
           <div class="ci-sub">${esc(dispPos(eg))}</div><div class="ci-sub">${esc(g.org||'')}${dup?' ⚠ 동명이인':''}</div></div></div>`;
     if(hasGates&&!done){
@@ -2096,6 +2099,7 @@ const ACTS={
   'nav':el=>nav(el.dataset.view),
   'demo-offline':()=>toggleDemoOffline(),
   'g-photo-rm':()=>{GUEST_PHOTO_DRAFT='';const prev=$('g-photo-preview');if(prev){prev.src='';prev.style.display='none'}},
+  'ci-toggle-photo':()=>{CI_SHOW_PHOTO=!CI_SHOW_PHOTO;rerender()},
   'notif-center':()=>openNotifCenter(),
   'do-ci':el=>doCheckin(el.dataset.id),
   'gate-toggle':el=>toggleGatePass(el.dataset.id,el.dataset.gate),

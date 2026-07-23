@@ -30,7 +30,7 @@ let pass=0,fail=0;const ok=(n,c)=>{c?(pass++,console.log('  ✓',n)):(fail++,con
 // ── 로직 + 렌더 ──
 store.clear();MOCK_QS={};
 const sb=makeSandbox(false);
-vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception,renderLogin,seatPriorityCoords,autoAssignSeats,swapSeats,moveSeatTo,renderSeating,addGate,removeGate,sanitizeGates,toggleGatePass,renderCI,resolvePhotoField};`,sb);
+vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},setShowPhoto:b=>{CI_SHOW_PHOTO=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception,renderLogin,seatPriorityCoords,autoAssignSeats,swapSeats,moveSeatTo,renderSeating,addGate,removeGate,sanitizeGates,toggleGatePass,renderCI,resolvePhotoField};`,sb);
 const A=sb.__API;A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
 const evId=A.S.events[0].id;
 
@@ -263,6 +263,18 @@ console.log('\n[사진 저장 로직]');
 ok('변경 없음(null)이면 photo 키 자체가 없음',Object.keys(A.resolvePhotoField(null)).length===0);
 ok('제거(빈 문자열)면 {photo:\'\'}',A.resolvePhotoField('').photo==='');
 ok('신규 교체(데이터URL)면 그 값 그대로',A.resolvePhotoField('data:image/jpeg;base64,xyz').photo==='data:image/jpeg;base64,xyz');
+
+console.log('\n[VIP 사진 토글]');
+A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
+const photoGid=A.uid('g');
+A.S.guests.push({id:photoGid,name:'사진테스트',org:'t',pos:'과장',defaultLevel:'VIP',grp:'기타',photo:'data:image/jpeg;base64,ABCDEF',isActive:true,eventRelevanceDefault:1});
+const currentAssigned2=A.S.eventGuests.filter(e=>e.eventId===evId&&e.arrivalStatus!=='cancelled').map(e=>({value:e.guestId}));
+MOCK_QS['.asgn-cb:checked']=currentAssigned2.concat([{value:photoGid}]);
+A.setASGN(evId);A.commitAssign();
+A.setShowPhoto(true);
+ok('사진 표시 켜면 VIP 사진 데이터가 렌더링됨',A.renderCI().includes('data:image/jpeg;base64,ABCDEF'));
+A.setShowPhoto(false);
+ok('사진 표시 끄면 기존처럼 이니셜만(사진 데이터 노출 안 됨)',!A.renderCI().includes('data:image/jpeg;base64,ABCDEF'));
 
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');
