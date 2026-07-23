@@ -39,7 +39,8 @@
 
 ## 데이터 모델 (컬렉션 · `S` / Firestore `spc_*`)
 `users, guests(내빈 기본), events, eventGuests(행사별 내빈), checkinLogs, scriptVersions, auditLogs, notif`.
-- `eventGuests` 핵심 필드: `arrivalStatus`(expected→en_route→arrived→reception_complete→seated→departed, 예외 absent/cancelled), `protocolLevel`(VVIP/VIP/Guest), `attendanceType`(self/representative/companion), `manualOrder`, `introType`, `receptionUserIds[]`, `receptionLocation`, **`vehicleNo`,`parkingSpot`**, `companions[{name,role,phone}]`(수행원 명단), `synced`, `version`.
+- `eventGuests` 핵심 필드: `arrivalStatus`(expected→en_route→arrived→reception_complete→seated→departed, 예외 absent/cancelled), `protocolLevel`(VVIP/VIP/Guest), `attendanceType`(self/representative/companion), `manualOrder`, `introType`, `receptionUserIds[]`, `receptionLocation`, **`vehicleNo`,`parkingSpot`**, `companions[{name,role,phone}]`(수행원 명단), `seat{row,col}|null`(좌석배치), `synced`, `version`.
+- `events` 핵심 필드에 `seatConfig{cols,rows,aisleRows[],aisleCols[]}`(좌석 그리드 크기·복도 행/열) 포함.
 - 저장값은 영문 코드, 화면 표기는 한글(`ARR_LABEL`,`ATT_LABEL`).
 
 ## 디자인 시스템 (Notion 비즈니스 스타일)

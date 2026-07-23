@@ -288,6 +288,20 @@ tbody tr:hover{background:var(--gray1)}
 .ord-card{background:var(--white);border:1px solid var(--gray2);border-radius:var(--r);padding:11px 13px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start;cursor:grab}
 .ord-card.dragging{opacity:.4}
 .ord-card.over{border-color:var(--green);box-shadow:var(--shadow)}
+.seat-stage{text-align:center;background:var(--green);color:#fff;font-weight:800;font-size:12px;letter-spacing:.05em;padding:8px;border-radius:var(--rs);margin-bottom:12px}
+.seat-wrap{overflow-x:auto;padding:4px 0}
+.seat-hdrs{display:flex;gap:4px;margin-bottom:4px;margin-left:24px}
+.seat-hdr-col{width:28px;height:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--gray4);cursor:pointer;border:none;border-radius:4px;background:transparent}
+.seat-hdr-col.aisle-on{background:var(--amber-l);color:var(--amber)}
+.seat-row{display:flex;gap:4px;margin-bottom:4px}
+.seat-hdr-row{width:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--gray4);cursor:pointer;border:none;border-radius:4px;background:transparent;margin-right:0}
+.seat-hdr-row.aisle-on{background:var(--amber-l);color:var(--amber)}
+.seat-cell{width:28px;height:28px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800}
+.seat-empty{background:var(--gray1);border:1px dashed var(--gray3)}
+.seat-aisle{background:transparent}
+.seat-occ{cursor:grab}
+.seat-occ.dragging{opacity:.4}
+.seat-cell.over{outline:2px solid var(--green);outline-offset:1px}
 .ord-num{width:26px;height:26px;border-radius:50%;background:var(--green-l);color:var(--green);font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .ord-reasons{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
 .reason-tag{font-size:10px;background:var(--green-l);color:var(--green);border:1px solid var(--green-b);border-radius:5px;padding:2px 6px}
@@ -396,17 +410,17 @@ const ROLES={
   mc:{name:'사회자',desc:'확정 시나리오 조회',color:'#0F766E',icon:'M8 1a2 2 0 00-2 2v5a2 2 0 004 0V3a2 2 0 00-2-2zM4 8a4 4 0 008 0M8 12v3M6 15h4'},
   viewer:{name:'상황실 조회자',desc:'대시보드 조회 전용',color:'#57534E',icon:'M2 13h2v-5H2zM6 13h2V4H6zM10 13h2V8h-2z'},
 };
-const P_ALL=['dashboard','checkin','reception','guests','paste','events','order','scenario','report','stats','users',
+const P_ALL=['dashboard','checkin','reception','guests','paste','events','order','seating','scenario','report','stats','users',
   'checkin.do','checkin.undo','checkin.admin','reception.act','guest.edit','guest.deactivate',
-  'event.edit','event.archive','event.delete','assign','order.edit','scenario.approve','export','privateNote','demoReset'];
+  'event.edit','event.archive','event.delete','assign','order.edit','seating.edit','scenario.approve','export','privateNote','demoReset'];
 const ROLE_PERMS={
   admin:new Set(P_ALL),
-  chief:new Set(['dashboard','checkin','reception','guests','paste','events','order','scenario','report','stats',
+  chief:new Set(['dashboard','checkin','reception','guests','paste','events','order','seating','scenario','report','stats',
     'checkin.do','checkin.undo','checkin.admin','reception.act','guest.edit','guest.deactivate',
-    'event.edit','event.archive','assign','order.edit','scenario.approve','export','privateNote']),
-  manager:new Set(['dashboard','checkin','reception','guests','paste','events','order','scenario','report','stats',
+    'event.edit','event.archive','assign','order.edit','seating.edit','scenario.approve','export','privateNote']),
+  manager:new Set(['dashboard','checkin','reception','guests','paste','events','order','seating','scenario','report','stats',
     'checkin.do','checkin.undo','reception.act','guest.edit','guest.deactivate',
-    'event.edit','event.archive','assign','order.edit','scenario.approve','export','privateNote']),
+    'event.edit','event.archive','assign','order.edit','seating.edit','scenario.approve','export','privateNote']),
   desk:new Set(['dashboard','checkin','checkin.do','checkin.undo']),
   greeter:new Set(['dashboard','reception','reception.act']),
   mc:new Set(['scenario']),
@@ -599,7 +613,7 @@ function seedIfEmpty(){
   const evId=uid('e');
   S.events=[{id:evId,title:'2026 새롬시 스마트도시 국제포럼',type:'forum',date:todayISO(),startTime:'10:00',endTime:'12:00',
     loc:'새롬시청 대강당',hostDept:'새롬시 · 대한스마트시티학회',managerIds:[S.users[2].id],status:'operating',
-    desc:'스마트도시 정책 방향 공유 및 공동선언',retentionUntil:'',createdBy:S.users[1].id,createdAt:now(),updatedAt:now(),version:1}];
+    desc:'스마트도시 정책 방향 공유 및 공동선언',retentionUntil:'',seatConfig:{cols:10,rows:8,aisleRows:[3],aisleCols:[5]},createdBy:S.users[1].id,createdAt:now(),updatedAt:now(),version:1}];
   S.eventGuests=S.guests.map((gg,i)=>({id:uid('eg'),eventId:evId,guestId:gg.id,invitationStatus:'confirmed',
     attendanceType:'self',repName:'',repPos:'',protocolLevel:gg.defaultLevel,protocolGroup:gg.grp,
     eventRelevance:gg.eventRelevanceDefault,manualOrder:null,introType:'individual',
@@ -680,6 +694,7 @@ const NAV=[
   {id:'guests',perm:'guests',label:'내빈 기본정보',icon:'M8 8a3 3 0 100-6 3 3 0 000 6zM2 14c0-3 2.7-5 6-5s6 2 6 5'},
   {id:'paste',perm:'paste',label:'명단 일괄등록',icon:'M5 2h6v3H5zM3 5h10v9H3z'},
   {id:'order',perm:'order',label:'의전 순서 · 코파일럿',icon:'M3 4h10M3 8h10M3 12h6'},
+  {id:'seating',perm:'seating',label:'좌석배치',icon:'M2 12h12M4 8h2v4H4zM7 8h2v4H7zM10 8h2v4h-2z'},
   {id:'scenario',perm:'scenario',label:'사회자 시나리오',icon:'M3 3h10v10H3zM6 6h4M6 9h4'},
   {sec:'보고 · 관리'},
   {id:'report',perm:'report',label:'결과보고',icon:'M4 2h8v12H4zM6 5h4M6 8h4M6 11h2'},
@@ -748,7 +763,7 @@ function emptyState(msg){return`<div class="empty"><svg viewBox="0 0 24 24" fill
 
 // ── 12. 라우터 ──────────────────────────────────────
 const PAGES={dashboard:renderDash,checkin:renderCI,reception:renderReception,guests:renderGuests,
-  paste:renderPaste,events:renderEvents,order:renderOrder,scenario:renderScenario,report:renderReport,stats:renderStats,users:renderUsers};
+  paste:renderPaste,events:renderEvents,order:renderOrder,seating:renderSeating,scenario:renderScenario,report:renderReport,stats:renderStats,users:renderUsers};
 function rerender(){
   if(!CUR)return;
   if(!can(NAV.find(n=>n.id===VIEW)?.perm)){VIEW=NAV.find(n=>n.id&&can(n.perm))?.id||'dashboard'}
@@ -758,6 +773,7 @@ function rerender(){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('on',b.dataset.view===VIEW));
   renderNav();
   if(VIEW==='order')initOrderDnD();
+  if(VIEW==='seating')initSeatDnD();
 }
 
 // ── 13. 위험 레이더 · 품질 지킴이 (엔진) ────────────
@@ -1298,6 +1314,76 @@ function computeOrder(evId){
     const ak=a.eg.manualOrder!=null?a.eg.manualOrder:1000+a.autoRank;
     const bk=b.eg.manualOrder!=null?b.eg.manualOrder:1000+b.autoRank;return ak-bk});
 }
+function seatPriorityCoords(cols,rows,aisleRows,aisleCols){
+  const ar=new Set(aisleRows||[]),ac=new Set(aisleCols||[]);
+  const centerCol=(cols-1)/2;
+  const coords=[];
+  for(let r=0;r<rows;r++){
+    if(ar.has(r))continue;
+    const colsOrder=Array.from({length:cols},(_,c)=>c).filter(c=>!ac.has(c))
+      .sort((a,b)=>Math.abs(a-centerCol)-Math.abs(b-centerCol)||a-b);
+    colsOrder.forEach(c=>coords.push({row:r,col:c}));
+  }
+  return coords;
+}
+function autoAssignSeats(evId){
+  const ev=byId(S.events,evId);if(!ev||!ev.seatConfig)return{placed:0,overflow:0};
+  const{cols,rows,aisleRows=[],aisleCols=[]}=ev.seatConfig;
+  const coords=seatPriorityCoords(cols,rows,aisleRows,aisleCols);
+  const order=computeOrder(evId).map(o=>o.eg);
+  order.forEach((eg,i)=>{eg.seat=i<coords.length?{...coords[i]}:null});
+  save(['eventGuests']);
+  const placed=Math.min(order.length,coords.length);
+  audit('event',evId,'seat_auto_assign',null,{placed,total:order.length},evId);
+  return{placed,overflow:Math.max(0,order.length-coords.length)};
+}
+function swapSeats(evId,egIdA,egIdB){
+  const a=byId(S.eventGuests,egIdA),b=byId(S.eventGuests,egIdB);
+  if(!a||!b)return;
+  const seatA=a.seat,seatB=b.seat;
+  a.seat=seatB;b.seat=seatA;
+  save(['eventGuests']);
+  audit('eventGuest',a.id,'seat_swap',{seat:seatA},{seat:seatB,with:b.id},evId);
+}
+function moveSeatTo(egId,row,col){
+  const eg=byId(S.eventGuests,egId);if(!eg)return;
+  const prevSeat=eg.seat;
+  eg.seat={row,col};
+  save(['eventGuests']);
+  audit('eventGuest',eg.id,'seat_move',{seat:prevSeat},{seat:eg.seat},eg.eventId);
+}
+function renderSeating(){
+  const ev=currentEvent();
+  const right=`${eventSelector()}${can('seating.edit')?'<button class="btn btn-s btn-sm" data-act="seat-auto">추천배치 적용</button>':''}`;
+  if(!ev)return pageHead('좌석배치','',right)+emptyState('행사를 선택하세요');
+  if(!ev.seatConfig||!ev.seatConfig.cols||!ev.seatConfig.rows)
+    return pageHead('좌석배치',esc(ev.title),right)+emptyState('행사 수정에서 가로·세로 칸수를 먼저 설정하세요');
+  const{cols,rows,aisleRows=[],aisleCols=[]}=ev.seatConfig;
+  const ar=new Set(aisleRows),ac=new Set(aisleCols);
+  const egs=egOf(ev.id);
+  const byPos={};egs.forEach(eg=>{if(eg.seat)byPos[`${eg.seat.row}_${eg.seat.col}`]=eg});
+  const capacity=seatPriorityCoords(cols,rows,aisleRows,aisleCols).length;
+  const overflow=Math.max(0,egs.length-capacity);
+  const canEdit=can('seating.edit');
+  const colHdrs=`<div class="seat-hdrs"><div class="seat-hdr-row"></div>${Array.from({length:cols},(_,c)=>
+    `<button class="seat-hdr-col ${ac.has(c)?'aisle-on':''}" data-act="seat-toggle-col" data-i="${c}" ${canEdit?'':'disabled'}>${c+1}</button>`).join('')}</div>`;
+  const bodyRows=Array.from({length:rows},(_,r)=>{
+    const cells=Array.from({length:cols},(_,c)=>{
+      if(ar.has(r)||ac.has(c))return'<div class="seat-cell seat-aisle"></div>';
+      const eg=byPos[`${r}_${c}`];
+      if(eg){const g=guestOf(eg);
+        return`<div class="seat-cell seat-occ av ${avCls(eg.protocolLevel)}" draggable="${canEdit}" data-eg="${eg.id}" data-row="${r}" data-col="${c}" title="${esc(dispName(eg))} · ${esc(g.org||'')}">${esc(dispName(eg)[0]||'?')}</div>`;
+      }
+      return`<div class="seat-cell seat-empty" data-row="${r}" data-col="${c}"></div>`;
+    }).join('');
+    return`<div class="seat-row"><button class="seat-hdr-row ${ar.has(r)?'aisle-on':''}" data-act="seat-toggle-row" data-i="${r}" ${canEdit?'':'disabled'}>${r+1}</button>${cells}</div>`;
+  }).join('');
+  return pageHead('좌석배치',`${esc(ev.title)} · ${egs.length}명${overflow?` · 배치 안 됨 ${overflow}명`:''}`,right)
+    +`<div class="card"><div class="card-body">
+      <div class="seat-stage">무대</div>
+      <div class="seat-wrap">${colHdrs}${bodyRows}</div>
+    </div></div>`;
+}
 function renderOrder(){
   const ev=currentEvent();
   const right=`${eventSelector()}
@@ -1334,6 +1420,7 @@ function renderOrder(){
       <div class="card-body" id="ord-list">${cards||emptyState('배정된 내빈이 없습니다')}</div></div>`;
 }
 let dragEg=null;
+let dragSeatEg=null;
 function initOrderDnD(){
   document.querySelectorAll('#ord-list .ord-card').forEach(card=>{
     card.addEventListener('dragstart',()=>{dragEg=card.dataset.eg;card.classList.add('dragging')});
@@ -1342,6 +1429,21 @@ function initOrderDnD(){
     card.addEventListener('dragleave',()=>card.classList.remove('over'));
     card.addEventListener('drop',e=>{e.preventDefault();if(!dragEg||dragEg===card.dataset.eg)return;
       reorderEg(dragEg,card.dataset.eg)});
+  });
+}
+function initSeatDnD(){
+  document.querySelectorAll('.seat-cell[data-row]').forEach(cell=>{
+    if(cell.classList.contains('seat-occ')){
+      cell.addEventListener('dragstart',()=>{dragSeatEg=cell.dataset.eg;cell.classList.add('dragging')});
+      cell.addEventListener('dragend',()=>{cell.classList.remove('dragging');document.querySelectorAll('.seat-cell').forEach(c=>c.classList.remove('over'))});
+    }
+    cell.addEventListener('dragover',e=>{e.preventDefault();cell.classList.add('over')});
+    cell.addEventListener('dragleave',()=>cell.classList.remove('over'));
+    cell.addEventListener('drop',e=>{e.preventDefault();if(!dragSeatEg)return;
+      const targetEg=cell.dataset.eg;
+      if(targetEg&&targetEg!==dragSeatEg)swapSeats(currentEventId(),dragSeatEg,targetEg);
+      else if(!targetEg)moveSeatTo(dragSeatEg,+cell.dataset.row,+cell.dataset.col);
+      dragSeatEg=null;rerender()});
   });
 }
 function currentOrderIds(){return computeOrder(currentEventId()).map(o=>o.eg.id)}
@@ -1715,6 +1817,8 @@ function openEventModal(id){
     ${f('장소','e-loc',ev?.loc)}${f('주최·주관','e-host',ev?.hostDept)}
     <div class="fl fg-full"><label>설명</label><input class="inp" id="e-desc" value="${esc(ev?.desc||'')}"></div>
     ${f('개인정보 보유기한','e-ret',ev?.retentionUntil,'date')}
+    <div class="fl"><label>좌석 가로 칸수</label><input class="inp" type="number" id="e-cols" value="${ev?.seatConfig?.cols||10}" min="1"></div>
+    <div class="fl"><label>좌석 세로 칸수</label><input class="inp" type="number" id="e-rows" value="${ev?.seatConfig?.rows||8}" min="1"></div>
   </div>`;
   GUEST_EDIT=null;EG_EDIT=id||'new-event';
   openModal(id?'행사 수정':'행사 생성',body,[{label:'취소',cls:'btn-s',act:'close'},{label:'저장',cls:'btn-p',act:'save-event'}]);
@@ -1723,12 +1827,20 @@ function openEventModal(id){
 function saveEvent(){
   const title=$('e-title').value.trim();const date=$('e-date').value;
   if(!title||!date){toast('행사명과 일자는 필수입니다','err');return}
+  const cols=clamp(parseInt($('e-cols').value)||10,1,40);
+  const rows=clamp(parseInt($('e-rows').value)||8,1,40);
   const d={title,type:$('e-type').value,date,startTime:$('e-start').value,endTime:$('e-end').value,
     loc:$('e-loc').value.trim(),hostDept:$('e-host').value.trim(),desc:$('e-desc').value.trim(),retentionUntil:$('e-ret').value,updatedAt:now()};
   const id=EG_EDIT;
-  if(id&&id!=='new-event'){const ev=byId(S.events,id);Object.assign(ev,d);ev.version=(ev.version||1)+1;audit('event',id,'update',null,d,id)}
-  else{const nid=uid('e');S.events.push({id:nid,...d,managerIds:[CUR.id],status:'confirmed',createdBy:CUR.id,createdAt:now(),version:1});
-    SEL=nid;audit('event',nid,'create',null,{title},nid)}
+  if(id&&id!=='new-event'){
+    const ev=byId(S.events,id);Object.assign(ev,d);
+    ev.seatConfig={cols,rows,aisleRows:ev.seatConfig?.aisleRows||[],aisleCols:ev.seatConfig?.aisleCols||[]};
+    ev.version=(ev.version||1)+1;audit('event',id,'update',null,d,id)
+  }else{
+    const nid=uid('e');
+    S.events.push({id:nid,...d,seatConfig:{cols,rows,aisleRows:[],aisleCols:[]},managerIds:[CUR.id],status:'confirmed',createdBy:CUR.id,createdAt:now(),version:1});
+    SEL=nid;audit('event',nid,'create',null,{title},nid)
+  }
   save(['events']);closeModal();toast('행사 저장 완료','ok');rerender();
 }
 
@@ -1925,6 +2037,16 @@ const ACTS={
   'asgn-all':el=>document.querySelectorAll('.asgn-cb').forEach(c=>{if(!c.dataset.arrived||el.dataset.v==='1')c.checked=el.dataset.v==='1'}),
   'commit-assign':()=>commitAssign(),
   'ord-auto':()=>autoRecommend(),
+  'seat-toggle-row':el=>{if(!can('seating.edit'))return;const ev=currentEvent();if(!ev||!ev.seatConfig)return;
+    const i=+el.dataset.i;const idx=ev.seatConfig.aisleRows.indexOf(i);
+    if(idx===-1)ev.seatConfig.aisleRows.push(i);else ev.seatConfig.aisleRows.splice(idx,1);
+    save(['events']);audit('event',ev.id,'seat_aisle_toggle',null,{row:i,on:idx===-1},ev.id);rerender()},
+  'seat-toggle-col':el=>{if(!can('seating.edit'))return;const ev=currentEvent();if(!ev||!ev.seatConfig)return;
+    const i=+el.dataset.i;const idx=ev.seatConfig.aisleCols.indexOf(i);
+    if(idx===-1)ev.seatConfig.aisleCols.push(i);else ev.seatConfig.aisleCols.splice(idx,1);
+    save(['events']);audit('event',ev.id,'seat_aisle_toggle',null,{col:i,on:idx===-1},ev.id);rerender()},
+  'seat-auto':()=>{const ev=currentEvent();if(!ev)return;const r=autoAssignSeats(ev.id);
+    toast(`추천배치 적용 완료${r.overflow?` · 배치 안 됨 ${r.overflow}명`:''}`,'ok');rerender()},
   'ord-versions':()=>showVersions(),
   'ord-approve':()=>approveScenario(),
   'ord-up':el=>moveEg(el.dataset.eg,-1),
