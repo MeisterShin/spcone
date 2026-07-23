@@ -199,8 +199,9 @@ tbody tr:hover{background:var(--gray1)}
 /* ── CHECKIN CARDS ────────────────────────────────── */
 .ci-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
 .ci-card{background:var(--white);border:1.5px solid var(--gray2);border-radius:var(--r);padding:14px;cursor:pointer;transition:all .15s;text-align:left;width:100%}
-.ci-card:hover:not(.ci-done){border-color:var(--green);box-shadow:var(--shadow);transform:translateY(-1px)}
-.ci-card:active:not(.ci-done){transform:scale(.98)}
+.ci-card:hover:not(.ci-done):not(.ci-gate-mode){border-color:var(--green);box-shadow:var(--shadow);transform:translateY(-1px)}
+.ci-card:active:not(.ci-done):not(.ci-gate-mode){transform:scale(.98)}
+.ci-card.ci-gate-mode{cursor:default}
 .ci-card.ci-done{background:var(--green-l);border-color:var(--green-b)}
 .ci-card.ci-vv{border-left:4px solid var(--red)}
 .ci-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
@@ -210,6 +211,10 @@ tbody tr:hover{background:var(--gray1)}
 .ci-done .ci-bot{border-top-color:var(--green-b)}
 .ci-time{font-size:11px;font-weight:800;color:var(--green)}
 .ci-hint{font-size:11px;color:var(--gray4)}
+.gate-row{display:flex;gap:6px;flex-wrap:wrap;padding-top:9px;border-top:1px solid var(--gray2)}
+.gate-btn{font-size:10.5px;font-weight:700;padding:5px 10px;border-radius:var(--rfull);border:1px solid var(--gray3);background:var(--white);color:var(--gray5);cursor:pointer}
+.gate-btn:hover{border-color:var(--green)}
+.gate-btn.gate-on{background:var(--green-l);border-color:var(--green-b);color:var(--green-d)}
 
 /* ── LIST ROW ─────────────────────────────────────── */
 .lrow{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--gray2)}
@@ -613,7 +618,8 @@ function seedIfEmpty(){
   const evId=uid('e');
   S.events=[{id:evId,title:'2026 새롬시 스마트도시 국제포럼',type:'forum',date:todayISO(),startTime:'10:00',endTime:'12:00',
     loc:'새롬시청 대강당',hostDept:'새롬시 · 대한스마트시티학회',managerIds:[S.users[2].id],status:'operating',
-    desc:'스마트도시 정책 방향 공유 및 공동선언',retentionUntil:'',seatConfig:{cols:10,rows:8,aisleRows:[3],aisleCols:[5]},createdBy:S.users[1].id,createdAt:now(),updatedAt:now(),version:1}];
+    desc:'스마트도시 정책 방향 공유 및 공동선언',retentionUntil:'',seatConfig:{cols:10,rows:8,aisleRows:[3],aisleCols:[5]}
+    ,gates:[{id:'gt1',name:'주차장 입장'},{id:'gt2',name:'건물 입장'},{id:'gt3',name:'행사장 입장'}],createdBy:S.users[1].id,createdAt:now(),updatedAt:now(),version:1}];
   S.eventGuests=S.guests.map((gg,i)=>({id:uid('eg'),eventId:evId,guestId:gg.id,invitationStatus:'confirmed',
     attendanceType:'self',repName:'',repPos:'',protocolLevel:gg.defaultLevel,protocolGroup:gg.grp,
     eventRelevance:gg.eventRelevanceDefault,manualOrder:null,introType:'individual',
@@ -874,7 +880,7 @@ function renderDash(){
     <div><div class="radar-msg">${esc(i.t)}</div><div class="radar-sub">${esc(i.d)}</div></div></div>`).join('')
     :`<div style="padding:20px;text-align:center;font-size:12px;color:var(--gray4)">데이터 품질 이상 없음</div>`;
 
-  const recent=[...S.checkinLogs].filter(l=>l.eventId===ev.id).reverse().slice(0,14);
+  const recent=[...S.checkinLogs].filter(l=>l.eventId===ev.id&&l.action!=='gate_pass'&&l.action!=='gate_undo').reverse().slice(0,14);
   const logHtml=recent.length?recent.map(l=>{const eg=byId(S.eventGuests,l.eventGuestId);const nm=eg?dispName(eg):'내빈';
     const act={checkin:'도착',undo:'체크인 취소',time_edit:'시각 수정',reception_complete:'영접 완료',seated:'착석',departed:'퇴장'}[l.action]||l.action;
     const type=l.action==='undo'?'warn':'ok';
@@ -911,6 +917,7 @@ function renderCI(){
     <button class="btn ${DEMO_OFFLINE?'btn-w':'btn-s'} btn-sm" data-act="demo-offline">${DEMO_OFFLINE?'오프라인 해제':'오프라인 시연'}</button>
     ${can('checkin.do')?`<button class="btn btn-s btn-sm" data-act="urgent-add">긴급 내빈 추가</button>`:''}`;
   if(!ev)return pageHead('현장 체크인','',right)+emptyState('행사를 선택하세요');
+  const gates=ev.gates||[];const hasGates=gates.length>0;
   const egs=egOf(ev.id);const arr=egs.filter(g=>isArrived(g.arrivalStatus)).length;
   const pct=egs.length?Math.round(arr/egs.length*100):0;
   const q=CI_Q.toLowerCase().replace(/\s/g,'');
@@ -924,15 +931,24 @@ function renderCI(){
 
   const cards=list.map(eg=>{const g=guestOf(eg);const done=isArrived(eg.arrivalStatus);const vv=eg.protocolLevel==='VVIP';
     const dup=S.guests.filter(x=>x.isActive&&x.name===g.name).length>1;
-    return`<button class="ci-card${done?' ci-done':''}${vv?' ci-vv':''}" data-act="do-ci" data-id="${eg.id}">
-      <div class="ci-top"><div class="av av32 ${avCls(eg.protocolLevel)}">${esc(dispName(eg)[0]||'?')}</div>
+    const top=`<div class="ci-top"><div class="av av32 ${avCls(eg.protocolLevel)}">${esc(dispName(eg)[0]||'?')}</div>
         <div style="flex:1;min-width:0"><div class="ci-name">${esc(dispName(eg))} ${levelBadge(eg.protocolLevel)}${eg.attendanceType==='representative'?'<span class="badge brep">대리</span>':''}</div>
-          <div class="ci-sub">${esc(dispPos(eg))}</div><div class="ci-sub">${esc(g.org||'')}${dup?' ⚠ 동명이인':''}</div></div></div>
+          <div class="ci-sub">${esc(dispPos(eg))}</div><div class="ci-sub">${esc(g.org||'')}${dup?' ⚠ 동명이인':''}</div></div></div>`;
+    if(hasGates&&!done){
+      const gateBtns=gates.map(gt=>{const passed=!!(eg.gatesPassed&&eg.gatesPassed[gt.id]);
+        return`<button type="button" class="gate-btn ${passed?'gate-on':''}" data-act="gate-toggle" data-id="${eg.id}" data-gate="${gt.id}">${passed?'✓ ':''}${esc(gt.name)}</button>`}).join('');
+      return`<div class="ci-card ci-gate-mode${vv?' ci-vv':''}">
+        ${top}
+        <div class="gate-row">${gateBtns}</div>
+      </div>`;
+    }
+    return`<button class="ci-card${done?' ci-done':''}${vv?' ci-vv':''}" data-act="do-ci" data-id="${eg.id}">
+      ${top}
       <div class="ci-bot">${done?`<span class="ci-time">✓ ${fmt(eg.checkedInAt)}</span><span style="font-size:11px">${esc(ARR_LABEL[eg.arrivalStatus])}</span>`
         :`<span class="ci-hint">${eg.synced===false?'기기 저장됨':'탭하여 체크인'}</span>${vv?'<span style="font-size:10px;color:var(--red);font-weight:800">VVIP 확인</span>':''}`}</div>
     </button>`}).join('');
 
-  return pageHead('현장 체크인',`${esc(ev.title)}`,right)
+  return pageHead('현장 체크인',`${esc(ev.title)}${hasGates?` · 게이트 ${gates.length}개`:''}`,right)
     +`<div id="conn-box" style="margin-bottom:12px"></div>
       <div class="prog"><div class="prog-top"><span>도착</span><strong>${arr} / ${egs.length}명</strong></div>
         <div class="prog-bg"><div class="prog-fill" style="width:${pct}%"></div></div></div>
@@ -1004,6 +1020,30 @@ function adminUndo(egId){
     if(!reason){toast('사유가 필요합니다','err');return}
     undoCheckin(egId,'[관리자] '+reason);
   });
+}
+function toggleGatePass(egId,gateId){
+  const eg=byId(S.eventGuests,egId);if(!eg)return;
+  if(!can('checkin.do')){toast('체크인 권한이 없습니다','err');return}
+  if(isArrived(eg.arrivalStatus))return;
+  eg.gatesPassed=eg.gatesPassed||{};
+  if(eg.gatesPassed[gateId]){
+    delete eg.gatesPassed[gateId];
+    eg.updatedAt=now();save(['eventGuests']);
+    audit('eventGuest',eg.id,'gate_undo',{gateId},null,eg.eventId);
+    rerender();return;
+  }
+  eg.gatesPassed[gateId]={at:now(),by:CUR.name};
+  eg.updatedAt=now();
+  const key=uid('k');
+  const logData={eventId:eg.eventId,eventGuestId:eg.id,action:'gate_pass',gateId,
+    previousStatus:eg.arrivalStatus,nextStatus:eg.arrivalStatus,previousTime:null,nextTime:now(),reason:'',idempotencyKey:key};
+  if(!isOnline()){const log=makeLog(logData);S.queue.push({egId:eg.id,idempotencyKey:key,log});save(['eventGuests','queue'],{silent:true})}
+  else{pushCheckinLog(logData);save(['eventGuests','checkinLogs'])}
+  audit('eventGuest',eg.id,'gate_pass',null,{gateId},eg.eventId);
+  const ev=byId(S.events,eg.eventId);const gates=ev?.gates||[];
+  const isLast=gates.length&&gates[gates.length-1].id===gateId;
+  if(isLast)doCheckin(egId);
+  else rerender();
 }
 
 // ── 16. VVIP 영접 관리 ──────────────────────────────
@@ -1728,7 +1768,7 @@ function renderUsers(){
 }
 
 // ── 26. 모달 인프라 ─────────────────────────────────
-let CONFIRM_FN=null,REASON_FN=null,GUEST_EDIT=null,EG_EDIT=null,REC_EG=null,URGENT=false,EG_COMP=[];
+let CONFIRM_FN=null,REASON_FN=null,GUEST_EDIT=null,EG_EDIT=null,REC_EG=null,URGENT=false,EG_COMP=[],EVT_GATES=[];
 function openModal(title,body,buttons,sizeCls){
   const foot=(buttons||[]).map(b=>`<button class="btn ${b.cls||'btn-s'}" data-act="${b.act}">${esc(b.label)}</button>`).join('');
   $('modal-root').innerHTML=`<div class="modal-bg open" data-act="modal-bg"><div class="modal ${sizeCls||''}">
@@ -1736,7 +1776,7 @@ function openModal(title,body,buttons,sizeCls){
       <svg width="12" height="12" viewBox="0 0 10 10" fill="none"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>
     <div class="modal-body">${body}</div>${foot?`<div class="modal-foot">${foot}</div>`:''}</div></div>`;
 }
-function closeModal(){$('modal-root').innerHTML='';CONFIRM_FN=REASON_FN=null;GUEST_EDIT=EG_EDIT=REC_EG=null;URGENT=false;EG_COMP=[]}
+function closeModal(){$('modal-root').innerHTML='';CONFIRM_FN=REASON_FN=null;GUEST_EDIT=EG_EDIT=REC_EG=null;URGENT=false;EG_COMP=[];EVT_GATES=[]}
 function openConfirm(title,msg,okLabel,fn){CONFIRM_FN=fn;
   openModal(title,`<p style="font-size:13.5px;line-height:1.7;color:var(--gray6)">${msg}</p>`,
     [{label:'취소',cls:'btn-s',act:'close'},{label:okLabel||'확인',cls:'btn-p',act:'confirm-ok'}]);}
@@ -1805,9 +1845,22 @@ function saveGuest(){
   else commit();
 }
 
+// ── 게이트 배열 조작 순수 함수 ────────────────────────
+function addGate(list){return[...list,{id:uid('gt'),name:''}]}
+function removeGate(list,idx){return list.filter((_,i)=>i!==idx)}
+function sanitizeGates(list){return list.map(g=>({id:g.id,name:(g.name||'').trim()})).filter(g=>g.name)}
+function renderGateRows(){
+  if(!EVT_GATES.length)return'<p class="hint">게이트 없음 — 단일 체크인 모드로 동작</p>';
+  return EVT_GATES.map((g,i)=>`<div class="gate-row-edit" style="display:flex;gap:6px;margin-bottom:6px">
+    <input class="inp gate-name" data-i="${i}" placeholder="게이트 이름(예: 주차장 입장)" value="${esc(g.name)}" style="flex:1">
+    <button type="button" class="btn btn-g btn-xs" data-act="evt-gate-rm" data-i="${i}">삭제</button></div>`).join('');
+}
+function refreshGateRows(){const el=$('evt-gate-list');if(el)el.innerHTML=renderGateRows()}
+
 // ── 29. 행사 모달 ───────────────────────────────────
 function openEventModal(id){
   const ev=id?byId(S.events,id):null;
+  EVT_GATES=(ev?.gates||[]).map(g=>({...g}));
   const f=(lbl,idn,val,type='text')=>`<div class="fl"><label>${lbl}</label><input class="inp" id="${idn}" value="${esc(val||'')}" ${type!=='text'?`type="${type}"`:''}></div>`;
   const body=`<div class="fg">
     <div class="fl fg-full"><label>행사명 <span class="req">*</span></label><input class="inp" id="e-title" value="${esc(ev?.title||'')}"></div>
@@ -1819,6 +1872,8 @@ function openEventModal(id){
     ${f('개인정보 보유기한','e-ret',ev?.retentionUntil,'date')}
     <div class="fl"><label>좌석 가로 칸수</label><input class="inp" type="number" id="e-cols" value="${ev?.seatConfig?.cols||10}" min="1"></div>
     <div class="fl"><label>좌석 세로 칸수</label><input class="inp" type="number" id="e-rows" value="${ev?.seatConfig?.rows||8}" min="1"></div>
+    <div class="fl fg-full"><label>게이트(동선)</label><div id="evt-gate-list">${renderGateRows()}</div>
+      <button type="button" class="btn btn-g btn-xs" data-act="evt-gate-add" style="margin-top:6px">+ 게이트 추가</button></div>
   </div>`;
   GUEST_EDIT=null;EG_EDIT=id||'new-event';
   openModal(id?'행사 수정':'행사 생성',body,[{label:'취소',cls:'btn-s',act:'close'},{label:'저장',cls:'btn-p',act:'save-event'}]);
@@ -1830,7 +1885,8 @@ function saveEvent(){
   const cols=clamp(parseInt($('e-cols').value)||10,1,40);
   const rows=clamp(parseInt($('e-rows').value)||8,1,40);
   const d={title,type:$('e-type').value,date,startTime:$('e-start').value,endTime:$('e-end').value,
-    loc:$('e-loc').value.trim(),hostDept:$('e-host').value.trim(),desc:$('e-desc').value.trim(),retentionUntil:$('e-ret').value,updatedAt:now()};
+    loc:$('e-loc').value.trim(),hostDept:$('e-host').value.trim(),desc:$('e-desc').value.trim(),retentionUntil:$('e-ret').value,
+    gates:sanitizeGates(EVT_GATES),updatedAt:now()};
   const id=EG_EDIT;
   if(id&&id!=='new-event'){
     const ev=byId(S.events,id);Object.assign(ev,d);
@@ -2011,6 +2067,7 @@ const ACTS={
   'demo-offline':()=>toggleDemoOffline(),
   'notif-center':()=>openNotifCenter(),
   'do-ci':el=>doCheckin(el.dataset.id),
+  'gate-toggle':el=>toggleGatePass(el.dataset.id,el.dataset.gate),
   'urgent-add':()=>openGuestModal(null,true),
   'ci-filter':el=>{CI_FILTER=el.dataset.f;rerender()},
   'rec-done':el=>receptionComplete(el.dataset.id),
@@ -2060,6 +2117,8 @@ const ACTS={
   'user-toggle':el=>{const u=byId(S.users,el.dataset.id);if(!u)return;u.status=u.status==='active'?'pending':'active';save(['users']);audit('user',u.id,'status',null,{status:u.status});rerender()},
   'eg-comp-add':()=>{EG_COMP=addCompanion(EG_COMP);refreshCompRows()},
   'eg-comp-rm':el=>{EG_COMP=removeCompanion(EG_COMP,+el.dataset.i);refreshCompRows()},
+  'evt-gate-add':()=>{EVT_GATES=addGate(EVT_GATES);refreshGateRows()},
+  'evt-gate-rm':el=>{EVT_GATES=removeGate(EVT_GATES,+el.dataset.i);refreshGateRows()},
   'stats-tab':el=>{STATS_TAB=el.dataset.tab;rerender()},
   'demo-reset':()=>resetDemo(),
   'close':()=>closeModal(),
@@ -2087,6 +2146,11 @@ document.addEventListener('input',e=>{
     if(t.classList.contains('comp-name'))EG_COMP[i].name=t.value;
     else if(t.classList.contains('comp-role'))EG_COMP[i].role=t.value;
     else EG_COMP[i].phone=t.value;
+    return;
+  }
+  if(t.classList.contains('gate-name')){
+    const i=+t.dataset.i;if(!EVT_GATES[i])return;
+    EVT_GATES[i].name=t.value;
     return;
   }
   const a=t.dataset.act;if(a!=='ci-search'&&a!=='g-search')return;
