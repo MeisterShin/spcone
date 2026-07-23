@@ -30,7 +30,7 @@ let pass=0,fail=0;const ok=(n,c)=>{c?(pass++,console.log('  ✓',n)):(fail++,con
 // ── 로직 + 렌더 ──
 store.clear();MOCK_QS={};
 const sb=makeSandbox(false);
-vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception,renderLogin,seatPriorityCoords,autoAssignSeats,swapSeats,moveSeatTo};`,sb);
+vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception,renderLogin,seatPriorityCoords,autoAssignSeats,swapSeats,moveSeatTo,renderSeating};`,sb);
 const A=sb.__API;A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
 const evId=A.S.events[0].id;
 
@@ -190,6 +190,13 @@ if(unseated){
   A.moveSeatTo(unseated.id,0,0);
   ok('moveSeatTo로 빈 좌석에 배치',unseated.seat&&unseated.seat.row===0&&unseated.seat.col===0);
 }
+
+console.log('\n[좌석배치 페이지]');
+A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
+seatEv.seatConfig.aisleCols=[1];
+const seatHtml=A.renderSeating();
+ok('무대 표시 포함',seatHtml.includes('무대'));
+ok('복도로 지정한 열은 좌석 칸이 아님(seat-aisle 클래스 존재)',seatHtml.includes('seat-aisle'));
 
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');

@@ -288,6 +288,20 @@ tbody tr:hover{background:var(--gray1)}
 .ord-card{background:var(--white);border:1px solid var(--gray2);border-radius:var(--r);padding:11px 13px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start;cursor:grab}
 .ord-card.dragging{opacity:.4}
 .ord-card.over{border-color:var(--green);box-shadow:var(--shadow)}
+.seat-stage{text-align:center;background:var(--green);color:#fff;font-weight:800;font-size:12px;letter-spacing:.05em;padding:8px;border-radius:var(--rs);margin-bottom:12px}
+.seat-wrap{overflow-x:auto;padding:4px 0}
+.seat-hdrs{display:flex;gap:4px;margin-bottom:4px;margin-left:24px}
+.seat-hdr-col{width:28px;height:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--gray4);cursor:pointer;border:none;border-radius:4px;background:transparent}
+.seat-hdr-col.aisle-on{background:var(--amber-l);color:var(--amber)}
+.seat-row{display:flex;gap:4px;margin-bottom:4px}
+.seat-hdr-row{width:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--gray4);cursor:pointer;border:none;border-radius:4px;background:transparent;margin-right:0}
+.seat-hdr-row.aisle-on{background:var(--amber-l);color:var(--amber)}
+.seat-cell{width:28px;height:28px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800}
+.seat-empty{background:var(--gray1);border:1px dashed var(--gray3)}
+.seat-aisle{background:transparent}
+.seat-occ{cursor:grab}
+.seat-occ.dragging{opacity:.4}
+.seat-cell.over{outline:2px solid var(--green);outline-offset:1px}
 .ord-num{width:26px;height:26px;border-radius:50%;background:var(--green-l);color:var(--green);font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .ord-reasons{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
 .reason-tag{font-size:10px;background:var(--green-l);color:var(--green);border:1px solid var(--green-b);border-radius:5px;padding:2px 6px}
@@ -396,17 +410,17 @@ const ROLES={
   mc:{name:'사회자',desc:'확정 시나리오 조회',color:'#0F766E',icon:'M8 1a2 2 0 00-2 2v5a2 2 0 004 0V3a2 2 0 00-2-2zM4 8a4 4 0 008 0M8 12v3M6 15h4'},
   viewer:{name:'상황실 조회자',desc:'대시보드 조회 전용',color:'#57534E',icon:'M2 13h2v-5H2zM6 13h2V4H6zM10 13h2V8h-2z'},
 };
-const P_ALL=['dashboard','checkin','reception','guests','paste','events','order','scenario','report','stats','users',
+const P_ALL=['dashboard','checkin','reception','guests','paste','events','order','seating','scenario','report','stats','users',
   'checkin.do','checkin.undo','checkin.admin','reception.act','guest.edit','guest.deactivate',
-  'event.edit','event.archive','event.delete','assign','order.edit','scenario.approve','export','privateNote','demoReset'];
+  'event.edit','event.archive','event.delete','assign','order.edit','seating.edit','scenario.approve','export','privateNote','demoReset'];
 const ROLE_PERMS={
   admin:new Set(P_ALL),
-  chief:new Set(['dashboard','checkin','reception','guests','paste','events','order','scenario','report','stats',
+  chief:new Set(['dashboard','checkin','reception','guests','paste','events','order','seating','scenario','report','stats',
     'checkin.do','checkin.undo','checkin.admin','reception.act','guest.edit','guest.deactivate',
-    'event.edit','event.archive','assign','order.edit','scenario.approve','export','privateNote']),
-  manager:new Set(['dashboard','checkin','reception','guests','paste','events','order','scenario','report','stats',
+    'event.edit','event.archive','assign','order.edit','seating.edit','scenario.approve','export','privateNote']),
+  manager:new Set(['dashboard','checkin','reception','guests','paste','events','order','seating','scenario','report','stats',
     'checkin.do','checkin.undo','reception.act','guest.edit','guest.deactivate',
-    'event.edit','event.archive','assign','order.edit','scenario.approve','export','privateNote']),
+    'event.edit','event.archive','assign','order.edit','seating.edit','scenario.approve','export','privateNote']),
   desk:new Set(['dashboard','checkin','checkin.do','checkin.undo']),
   greeter:new Set(['dashboard','reception','reception.act']),
   mc:new Set(['scenario']),
@@ -680,6 +694,7 @@ const NAV=[
   {id:'guests',perm:'guests',label:'내빈 기본정보',icon:'M8 8a3 3 0 100-6 3 3 0 000 6zM2 14c0-3 2.7-5 6-5s6 2 6 5'},
   {id:'paste',perm:'paste',label:'명단 일괄등록',icon:'M5 2h6v3H5zM3 5h10v9H3z'},
   {id:'order',perm:'order',label:'의전 순서 · 코파일럿',icon:'M3 4h10M3 8h10M3 12h6'},
+  {id:'seating',perm:'seating',label:'좌석배치',icon:'M2 12h12M4 8h2v4H4zM7 8h2v4H7zM10 8h2v4h-2z'},
   {id:'scenario',perm:'scenario',label:'사회자 시나리오',icon:'M3 3h10v10H3zM6 6h4M6 9h4'},
   {sec:'보고 · 관리'},
   {id:'report',perm:'report',label:'결과보고',icon:'M4 2h8v12H4zM6 5h4M6 8h4M6 11h2'},
@@ -748,7 +763,7 @@ function emptyState(msg){return`<div class="empty"><svg viewBox="0 0 24 24" fill
 
 // ── 12. 라우터 ──────────────────────────────────────
 const PAGES={dashboard:renderDash,checkin:renderCI,reception:renderReception,guests:renderGuests,
-  paste:renderPaste,events:renderEvents,order:renderOrder,scenario:renderScenario,report:renderReport,stats:renderStats,users:renderUsers};
+  paste:renderPaste,events:renderEvents,order:renderOrder,seating:renderSeating,scenario:renderScenario,report:renderReport,stats:renderStats,users:renderUsers};
 function rerender(){
   if(!CUR)return;
   if(!can(NAV.find(n=>n.id===VIEW)?.perm)){VIEW=NAV.find(n=>n.id&&can(n.perm))?.id||'dashboard'}
@@ -1335,6 +1350,38 @@ function moveSeatTo(egId,row,col){
   eg.seat={row,col};
   save(['eventGuests']);
   audit('eventGuest',eg.id,'seat_move',{seat:prevSeat},{seat:eg.seat},eg.eventId);
+}
+function renderSeating(){
+  const ev=currentEvent();
+  const right=`${eventSelector()}${can('seating.edit')?'<button class="btn btn-s btn-sm" data-act="seat-auto">추천배치 적용</button>':''}`;
+  if(!ev)return pageHead('좌석배치','',right)+emptyState('행사를 선택하세요');
+  if(!ev.seatConfig||!ev.seatConfig.cols||!ev.seatConfig.rows)
+    return pageHead('좌석배치',esc(ev.title),right)+emptyState('행사 수정에서 가로·세로 칸수를 먼저 설정하세요');
+  const{cols,rows,aisleRows=[],aisleCols=[]}=ev.seatConfig;
+  const ar=new Set(aisleRows),ac=new Set(aisleCols);
+  const egs=egOf(ev.id);
+  const byPos={};egs.forEach(eg=>{if(eg.seat)byPos[`${eg.seat.row}_${eg.seat.col}`]=eg});
+  const capacity=seatPriorityCoords(cols,rows,aisleRows,aisleCols).length;
+  const overflow=Math.max(0,egs.length-capacity);
+  const canEdit=can('seating.edit');
+  const colHdrs=`<div class="seat-hdrs"><div class="seat-hdr-row"></div>${Array.from({length:cols},(_,c)=>
+    `<button class="seat-hdr-col ${ac.has(c)?'aisle-on':''}" data-act="seat-toggle-col" data-i="${c}" ${canEdit?'':'disabled'}>${c+1}</button>`).join('')}</div>`;
+  const bodyRows=Array.from({length:rows},(_,r)=>{
+    const cells=Array.from({length:cols},(_,c)=>{
+      if(ar.has(r)||ac.has(c))return'<div class="seat-cell seat-aisle"></div>';
+      const eg=byPos[`${r}_${c}`];
+      if(eg){const g=guestOf(eg);
+        return`<div class="seat-cell seat-occ av ${avCls(eg.protocolLevel)}" draggable="${canEdit}" data-eg="${eg.id}" data-row="${r}" data-col="${c}" title="${esc(dispName(eg))} · ${esc(g.org||'')}">${esc(dispName(eg)[0]||'?')}</div>`;
+      }
+      return`<div class="seat-cell seat-empty" data-row="${r}" data-col="${c}"></div>`;
+    }).join('');
+    return`<div class="seat-row"><button class="seat-hdr-row ${ar.has(r)?'aisle-on':''}" data-act="seat-toggle-row" data-i="${r}" ${canEdit?'':'disabled'}>${r+1}</button>${cells}</div>`;
+  }).join('');
+  return pageHead('좌석배치',`${esc(ev.title)} · ${egs.length}명${overflow?` · 배치 안 됨 ${overflow}명`:''}`,right)
+    +`<div class="card"><div class="card-body">
+      <div class="seat-stage">무대</div>
+      <div class="seat-wrap">${colHdrs}${bodyRows}</div>
+    </div></div>`;
 }
 function renderOrder(){
   const ev=currentEvent();
@@ -1973,6 +2020,16 @@ const ACTS={
   'asgn-all':el=>document.querySelectorAll('.asgn-cb').forEach(c=>{if(!c.dataset.arrived||el.dataset.v==='1')c.checked=el.dataset.v==='1'}),
   'commit-assign':()=>commitAssign(),
   'ord-auto':()=>autoRecommend(),
+  'seat-toggle-row':el=>{if(!can('seating.edit'))return;const ev=currentEvent();if(!ev||!ev.seatConfig)return;
+    const i=+el.dataset.i;const idx=ev.seatConfig.aisleRows.indexOf(i);
+    if(idx===-1)ev.seatConfig.aisleRows.push(i);else ev.seatConfig.aisleRows.splice(idx,1);
+    save(['events']);rerender()},
+  'seat-toggle-col':el=>{if(!can('seating.edit'))return;const ev=currentEvent();if(!ev||!ev.seatConfig)return;
+    const i=+el.dataset.i;const idx=ev.seatConfig.aisleCols.indexOf(i);
+    if(idx===-1)ev.seatConfig.aisleCols.push(i);else ev.seatConfig.aisleCols.splice(idx,1);
+    save(['events']);rerender()},
+  'seat-auto':()=>{const ev=currentEvent();if(!ev)return;const r=autoAssignSeats(ev.id);
+    toast(`추천배치 적용 완료${r.overflow?` · 배치 안 됨 ${r.overflow}명`:''}`,'ok');rerender()},
   'ord-versions':()=>showVersions(),
   'ord-approve':()=>approveScenario(),
   'ord-up':el=>moveEg(el.dataset.eg,-1),
