@@ -1805,6 +1805,11 @@ function saveGuest(){
   else commit();
 }
 
+// ── 게이트 배열 조작 순수 함수 ────────────────────────
+function addGate(list){return[...list,{id:uid('gt'),name:''}]}
+function removeGate(list,idx){return list.filter((_,i)=>i!==idx)}
+function sanitizeGates(list){return list.map(g=>({id:g.id,name:(g.name||'').trim()})).filter(g=>g.name)}
+
 // ── 29. 행사 모달 ───────────────────────────────────
 function openEventModal(id){
   const ev=id?byId(S.events,id):null;

@@ -30,7 +30,7 @@ let pass=0,fail=0;const ok=(n,c)=>{c?(pass++,console.log('  ✓',n)):(fail++,con
 // ── 로직 + 렌더 ──
 store.clear();MOCK_QS={};
 const sb=makeSandbox(false);
-vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception,renderLogin,seatPriorityCoords,autoAssignSeats,swapSeats,moveSeatTo,renderSeating};`,sb);
+vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception,renderLogin,seatPriorityCoords,autoAssignSeats,swapSeats,moveSeatTo,renderSeating,addGate,removeGate,sanitizeGates};`,sb);
 const A=sb.__API;A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
 const evId=A.S.events[0].id;
 
@@ -197,6 +197,20 @@ seatEv.seatConfig.aisleCols=[1];
 const seatHtml=A.renderSeating();
 ok('무대 표시 포함',seatHtml.includes('무대'));
 ok('복도로 지정한 열은 좌석 칸이 아님(seat-aisle 클래스 존재)',seatHtml.includes('seat-aisle'));
+
+console.log('\n[게이트 배열 로직]');
+const gl0=[];
+const gl1=A.addGate(gl0);
+ok('addGate는 원본을 바꾸지 않음',gl0.length===0&&gl1.length===1);
+ok('addGate 결과는 빈 이름',gl1[0].name==='');
+const gl2=A.addGate(gl1);
+const gl3=A.removeGate(gl2,0);
+ok('removeGate는 원본을 바꾸지 않음',gl2.length===2&&gl3.length===1);
+const dirtyGates=[{id:'g1',name:'  주차장 입장  '},{id:'g2',name:'   '},{id:'g3',name:'행사장 입장'}];
+const cleanGates=A.sanitizeGates(dirtyGates);
+ok('빈 이름 게이트 제외',cleanGates.length===2);
+ok('trim 처리됨',cleanGates[0].name==='주차장 입장');
+ok('원본 배열 불변',dirtyGates.length===3&&dirtyGates[0].name==='  주차장 입장  ');
 
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');
