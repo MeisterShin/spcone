@@ -613,7 +613,8 @@ function seedIfEmpty(){
   const evId=uid('e');
   S.events=[{id:evId,title:'2026 새롬시 스마트도시 국제포럼',type:'forum',date:todayISO(),startTime:'10:00',endTime:'12:00',
     loc:'새롬시청 대강당',hostDept:'새롬시 · 대한스마트시티학회',managerIds:[S.users[2].id],status:'operating',
-    desc:'스마트도시 정책 방향 공유 및 공동선언',retentionUntil:'',seatConfig:{cols:10,rows:8,aisleRows:[3],aisleCols:[5]},createdBy:S.users[1].id,createdAt:now(),updatedAt:now(),version:1}];
+    desc:'스마트도시 정책 방향 공유 및 공동선언',retentionUntil:'',seatConfig:{cols:10,rows:8,aisleRows:[3],aisleCols:[5]}
+    ,gates:[{id:'gt1',name:'주차장 입장'},{id:'gt2',name:'건물 입장'},{id:'gt3',name:'행사장 입장'}],createdBy:S.users[1].id,createdAt:now(),updatedAt:now(),version:1}];
   S.eventGuests=S.guests.map((gg,i)=>({id:uid('eg'),eventId:evId,guestId:gg.id,invitationStatus:'confirmed',
     attendanceType:'self',repName:'',repPos:'',protocolLevel:gg.defaultLevel,protocolGroup:gg.grp,
     eventRelevance:gg.eventRelevanceDefault,manualOrder:null,introType:'individual',
@@ -1728,7 +1729,7 @@ function renderUsers(){
 }
 
 // ── 26. 모달 인프라 ─────────────────────────────────
-let CONFIRM_FN=null,REASON_FN=null,GUEST_EDIT=null,EG_EDIT=null,REC_EG=null,URGENT=false,EG_COMP=[];
+let CONFIRM_FN=null,REASON_FN=null,GUEST_EDIT=null,EG_EDIT=null,REC_EG=null,URGENT=false,EG_COMP=[],EVT_GATES=[];
 function openModal(title,body,buttons,sizeCls){
   const foot=(buttons||[]).map(b=>`<button class="btn ${b.cls||'btn-s'}" data-act="${b.act}">${esc(b.label)}</button>`).join('');
   $('modal-root').innerHTML=`<div class="modal-bg open" data-act="modal-bg"><div class="modal ${sizeCls||''}">
@@ -1736,7 +1737,7 @@ function openModal(title,body,buttons,sizeCls){
       <svg width="12" height="12" viewBox="0 0 10 10" fill="none"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>
     <div class="modal-body">${body}</div>${foot?`<div class="modal-foot">${foot}</div>`:''}</div></div>`;
 }
-function closeModal(){$('modal-root').innerHTML='';CONFIRM_FN=REASON_FN=null;GUEST_EDIT=EG_EDIT=REC_EG=null;URGENT=false;EG_COMP=[]}
+function closeModal(){$('modal-root').innerHTML='';CONFIRM_FN=REASON_FN=null;GUEST_EDIT=EG_EDIT=REC_EG=null;URGENT=false;EG_COMP=[];EVT_GATES=[]}
 function openConfirm(title,msg,okLabel,fn){CONFIRM_FN=fn;
   openModal(title,`<p style="font-size:13.5px;line-height:1.7;color:var(--gray6)">${msg}</p>`,
     [{label:'취소',cls:'btn-s',act:'close'},{label:okLabel||'확인',cls:'btn-p',act:'confirm-ok'}]);}
@@ -1809,10 +1810,18 @@ function saveGuest(){
 function addGate(list){return[...list,{id:uid('gt'),name:''}]}
 function removeGate(list,idx){return list.filter((_,i)=>i!==idx)}
 function sanitizeGates(list){return list.map(g=>({id:g.id,name:(g.name||'').trim()})).filter(g=>g.name)}
+function renderGateRows(){
+  if(!EVT_GATES.length)return'<p class="hint">게이트 없음 — 단일 체크인 모드로 동작</p>';
+  return EVT_GATES.map((g,i)=>`<div class="gate-row-edit" style="display:flex;gap:6px;margin-bottom:6px">
+    <input class="inp gate-name" data-i="${i}" placeholder="게이트 이름(예: 주차장 입장)" value="${esc(g.name)}" style="flex:1">
+    <button type="button" class="btn btn-g btn-xs" data-act="evt-gate-rm" data-i="${i}">삭제</button></div>`).join('');
+}
+function refreshGateRows(){const el=$('evt-gate-list');if(el)el.innerHTML=renderGateRows()}
 
 // ── 29. 행사 모달 ───────────────────────────────────
 function openEventModal(id){
   const ev=id?byId(S.events,id):null;
+  EVT_GATES=(ev?.gates||[]).map(g=>({...g}));
   const f=(lbl,idn,val,type='text')=>`<div class="fl"><label>${lbl}</label><input class="inp" id="${idn}" value="${esc(val||'')}" ${type!=='text'?`type="${type}"`:''}></div>`;
   const body=`<div class="fg">
     <div class="fl fg-full"><label>행사명 <span class="req">*</span></label><input class="inp" id="e-title" value="${esc(ev?.title||'')}"></div>
@@ -1824,6 +1833,8 @@ function openEventModal(id){
     ${f('개인정보 보유기한','e-ret',ev?.retentionUntil,'date')}
     <div class="fl"><label>좌석 가로 칸수</label><input class="inp" type="number" id="e-cols" value="${ev?.seatConfig?.cols||10}" min="1"></div>
     <div class="fl"><label>좌석 세로 칸수</label><input class="inp" type="number" id="e-rows" value="${ev?.seatConfig?.rows||8}" min="1"></div>
+    <div class="fl fg-full"><label>게이트(동선)</label><div id="evt-gate-list">${renderGateRows()}</div>
+      <button type="button" class="btn btn-g btn-xs" data-act="evt-gate-add" style="margin-top:6px">+ 게이트 추가</button></div>
   </div>`;
   GUEST_EDIT=null;EG_EDIT=id||'new-event';
   openModal(id?'행사 수정':'행사 생성',body,[{label:'취소',cls:'btn-s',act:'close'},{label:'저장',cls:'btn-p',act:'save-event'}]);
@@ -1835,7 +1846,8 @@ function saveEvent(){
   const cols=clamp(parseInt($('e-cols').value)||10,1,40);
   const rows=clamp(parseInt($('e-rows').value)||8,1,40);
   const d={title,type:$('e-type').value,date,startTime:$('e-start').value,endTime:$('e-end').value,
-    loc:$('e-loc').value.trim(),hostDept:$('e-host').value.trim(),desc:$('e-desc').value.trim(),retentionUntil:$('e-ret').value,updatedAt:now()};
+    loc:$('e-loc').value.trim(),hostDept:$('e-host').value.trim(),desc:$('e-desc').value.trim(),retentionUntil:$('e-ret').value,
+    gates:sanitizeGates(EVT_GATES),updatedAt:now()};
   const id=EG_EDIT;
   if(id&&id!=='new-event'){
     const ev=byId(S.events,id);Object.assign(ev,d);
@@ -2065,6 +2077,8 @@ const ACTS={
   'user-toggle':el=>{const u=byId(S.users,el.dataset.id);if(!u)return;u.status=u.status==='active'?'pending':'active';save(['users']);audit('user',u.id,'status',null,{status:u.status});rerender()},
   'eg-comp-add':()=>{EG_COMP=addCompanion(EG_COMP);refreshCompRows()},
   'eg-comp-rm':el=>{EG_COMP=removeCompanion(EG_COMP,+el.dataset.i);refreshCompRows()},
+  'evt-gate-add':()=>{EVT_GATES=addGate(EVT_GATES);refreshGateRows()},
+  'evt-gate-rm':el=>{EVT_GATES=removeGate(EVT_GATES,+el.dataset.i);refreshGateRows()},
   'stats-tab':el=>{STATS_TAB=el.dataset.tab;rerender()},
   'demo-reset':()=>resetDemo(),
   'close':()=>closeModal(),
@@ -2092,6 +2106,11 @@ document.addEventListener('input',e=>{
     if(t.classList.contains('comp-name'))EG_COMP[i].name=t.value;
     else if(t.classList.contains('comp-role'))EG_COMP[i].role=t.value;
     else EG_COMP[i].phone=t.value;
+    return;
+  }
+  if(t.classList.contains('gate-name')){
+    const i=+t.dataset.i;if(!EVT_GATES[i])return;
+    EVT_GATES[i].name=t.value;
     return;
   }
   const a=t.dataset.act;if(a!=='ci-search'&&a!=='g-search')return;

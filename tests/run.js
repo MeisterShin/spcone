@@ -211,6 +211,7 @@ const cleanGates=A.sanitizeGates(dirtyGates);
 ok('빈 이름 게이트 제외',cleanGates.length===2);
 ok('trim 처리됨',cleanGates[0].name==='주차장 입장');
 ok('원본 배열 불변',dirtyGates.length===3&&dirtyGates[0].name==='  주차장 입장  ');
+ok('시드 행사에 기본 게이트 3개 존재',A.S.events[0].gates&&A.S.events[0].gates.length===3&&A.S.events[0].gates[2].name==='행사장 입장');
 
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');
