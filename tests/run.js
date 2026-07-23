@@ -162,6 +162,7 @@ ok('전 역할 icon 필드 보유',Object.values(A.ROLES).every(r=>typeof r.icon
 console.log('\n[좌석배치 로직]');
 const coords=A.seatPriorityCoords(4,3,[1],[]);
 ok('복도 행 제외',coords.every(c=>c.row!==1));
+ok('복도 열 제외',A.seatPriorityCoords(4,3,[],[0,3]).every(c=>c.col!==0&&c.col!==3));
 ok('무대(0행)부터 채움',coords[0].row===0);
 ok('중앙 열 우선(0행 첫 좌표는 열 1 또는 2, 4칸 중앙 근접)',coords[0].col===1||coords[0].col===2);
 ok('전체 칸수 = (3-1)행 × 4열',coords.length===8);

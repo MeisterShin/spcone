@@ -1324,15 +1324,17 @@ function autoAssignSeats(evId){
 function swapSeats(evId,egIdA,egIdB){
   const a=byId(S.eventGuests,egIdA),b=byId(S.eventGuests,egIdB);
   if(!a||!b)return;
-  const tmp=a.seat;a.seat=b.seat;b.seat=tmp;
+  const seatA=a.seat,seatB=b.seat;
+  a.seat=seatB;b.seat=seatA;
   save(['eventGuests']);
-  audit('eventGuest',a.id,'seat_swap',null,{with:b.id},evId);
+  audit('eventGuest',a.id,'seat_swap',{seat:seatA},{seat:seatB,with:b.id},evId);
 }
 function moveSeatTo(egId,row,col){
   const eg=byId(S.eventGuests,egId);if(!eg)return;
+  const prevSeat=eg.seat;
   eg.seat={row,col};
   save(['eventGuests']);
-  audit('eventGuest',eg.id,'seat_move',null,{row,col},eg.eventId);
+  audit('eventGuest',eg.id,'seat_move',{seat:prevSeat},{seat:eg.seat},eg.eventId);
 }
 function renderOrder(){
   const ev=currentEvent();
