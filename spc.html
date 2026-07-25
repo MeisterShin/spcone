@@ -358,13 +358,13 @@ tbody tr:hover{background:var(--gray1)}
 <div id="root" hidden>
   <div class="topbar">
     <button class="hamb" data-act="toggle-sb" aria-label="메뉴 열기"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M3 6h16M3 11h16M3 16h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
-    <div style="font-weight:900;font-size:14px">SPC ONE</div>
+    <div style="font-weight:900;font-size:14px;cursor:pointer" data-act="go-home" title="처음 화면으로">SPC ONE</div>
     <div id="tb-conn"></div>
   </div>
   <div class="app">
     <div class="sb-backdrop" data-act="toggle-sb"></div>
     <aside class="sidebar" id="sb">
-      <div class="sb-logo">
+      <div class="sb-logo" data-act="go-home" style="cursor:pointer" title="처음 화면으로">
         <div class="sb-icon"><svg viewBox="0 0 16 16" fill="none"><path d="M8 1l6 3v4c0 3.5-2.5 6-6 7-3.5-1-6-3.5-6-7V4l6-3z" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/><path d="M5.5 8l1.8 1.8L11 6" stroke="#fff" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
         <div><div class="sb-name">SPC ONE</div><div class="sb-sub">화성시 지능형 의전 운영</div></div>
       </div>
@@ -2100,6 +2100,7 @@ const ACTS={
   'login':el=>login(el.dataset.role),
   'logout':()=>logout(),
   'toggle-sb':()=>toggleSB(),
+  'go-home':()=>nav(NAV.find(n=>n.id&&can(n.perm))?.id||'dashboard'),
   'nav':el=>nav(el.dataset.view),
   'demo-offline':()=>toggleDemoOffline(),
   'g-photo-rm':()=>{GUEST_PHOTO_DRAFT='';const prev=$('g-photo-preview');if(prev){prev.src='';prev.style.display='none'}},
