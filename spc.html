@@ -301,6 +301,9 @@ tbody tr:hover{background:var(--gray1)}
 .seat-row{display:flex;gap:4px;margin-bottom:4px}
 .seat-hdr-row{width:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--gray4);cursor:pointer;border:none;border-radius:4px;background:transparent;margin-right:0}
 .seat-hdr-row.aisle-on{background:var(--amber-l);color:var(--amber)}
+.seat-hdr-col:disabled,.seat-hdr-row:disabled{cursor:default;opacity:.55}
+.seat-hdr-col.editable,.seat-hdr-row.editable{box-shadow:inset 0 0 0 2px var(--green-b)}
+.seat-hdr-col.editable:hover,.seat-hdr-row.editable:hover{background:var(--green-l);color:var(--green)}
 .seat-cell{width:46px;height:34px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;letter-spacing:-0.3px;padding:0 2px;overflow:hidden;white-space:nowrap}
 .seat-empty{background:var(--gray1);border:1px dashed var(--gray3)}
 .seat-aisle{background:transparent}
@@ -1395,9 +1398,18 @@ function moveSeatTo(egId,row,col){
   save(['eventGuests']);
   audit('eventGuest',eg.id,'seat_move',{seat:prevSeat},{seat:eg.seat},eg.eventId);
 }
+function applySeatResize(ev,colsRaw,rowsRaw){
+  const cols=clamp(parseInt(colsRaw)||10,1,40);
+  const rows=clamp(parseInt(rowsRaw)||8,1,40);
+  ev.seatConfig.cols=cols;ev.seatConfig.rows=rows;
+  return{cols,rows};
+}
+let SEAT_EDIT_MODE=false;
 function renderSeating(){
   const ev=currentEvent();
-  const right=`${eventSelector()}${can('seating.edit')?'<button class="btn btn-s btn-sm" data-act="seat-auto">추천배치 적용</button>':''}`;
+  const canEdit=can('seating.edit');
+  const right=`${eventSelector()}${canEdit?`<button class="btn btn-s btn-sm" data-act="seat-auto">추천배치 적용</button>
+    <button class="btn ${SEAT_EDIT_MODE?'btn-w':'btn-s'} btn-sm" data-act="seat-edit-toggle">${SEAT_EDIT_MODE?'편집 종료':'편집'}</button>`:''}`;
   if(!ev)return pageHead('좌석배치','',right)+emptyState('행사를 선택하세요');
   if(!ev.seatConfig||!ev.seatConfig.cols||!ev.seatConfig.rows)
     return pageHead('좌석배치',esc(ev.title),right)+emptyState('행사 수정에서 가로·세로 칸수를 먼저 설정하세요');
@@ -1407,24 +1419,32 @@ function renderSeating(){
   const byPos={};egs.forEach(eg=>{if(eg.seat)byPos[`${eg.seat.row}_${eg.seat.col}`]=eg});
   const capacity=seatPriorityCoords(cols,rows,aisleRows,aisleCols).length;
   const overflow=Math.max(0,egs.length-capacity);
-  const canEdit=can('seating.edit');
+  const editOn=canEdit&&SEAT_EDIT_MODE;
+  const resizePanel=editOn?`<div class="card" style="margin-bottom:12px"><div class="card-body" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+    <div class="fl"><label>가로 칸수</label><input class="inp" type="number" id="seat-cols-input" value="${cols}" min="1" style="width:90px"></div>
+    <div class="fl"><label>세로 칸수</label><input class="inp" type="number" id="seat-rows-input" value="${rows}" min="1" style="width:90px"></div>
+    <button class="btn btn-p btn-sm" data-act="seat-resize-apply">적용</button>
+    <span class="hint" style="margin:0">칸수를 바꿔 적용하거나, 아래 복도 번호를 클릭해 복도를 지정하세요</span>
+  </div></div>`:'';
   const colHdrs=`<div class="seat-hdrs"><div class="seat-hdr-row"></div>${Array.from({length:cols},(_,c)=>
-    `<button class="seat-hdr-col ${ac.has(c)?'aisle-on':''}" data-act="seat-toggle-col" data-i="${c}" ${canEdit?'':'disabled'}>${c+1}</button>`).join('')}</div>`;
+    `<button class="seat-hdr-col ${ac.has(c)?'aisle-on':''}${editOn?' editable':''}" data-act="seat-toggle-col" data-i="${c}" ${editOn?'':'disabled'}>${c+1}</button>`).join('')}</div>`;
   const bodyRows=Array.from({length:rows},(_,r)=>{
     const cells=Array.from({length:cols},(_,c)=>{
       if(ar.has(r)||ac.has(c))return'<div class="seat-cell seat-aisle"></div>';
       const eg=byPos[`${r}_${c}`];
       if(eg){const g=guestOf(eg);
-        return`<div class="seat-cell seat-occ av ${avCls(eg.protocolLevel)}" draggable="${canEdit}" data-eg="${eg.id}" data-row="${r}" data-col="${c}" title="${esc(dispName(eg))} · ${esc(g.org||'')}">${esc(dispName(eg).slice(0,3)||'?')}</div>`;
+        return`<div class="seat-cell seat-occ av ${avCls(eg.protocolLevel)}${TAP_SEAT_EG===eg.id?' seat-selected':''}" draggable="${canEdit}" data-eg="${eg.id}" data-row="${r}" data-col="${c}" title="${esc(dispName(eg))} · ${esc(g.org||'')}">${esc(dispName(eg).slice(0,3)||'?')}</div>`;
       }
       return`<div class="seat-cell seat-empty" data-row="${r}" data-col="${c}"></div>`;
     }).join('');
-    return`<div class="seat-row"><button class="seat-hdr-row ${ar.has(r)?'aisle-on':''}" data-act="seat-toggle-row" data-i="${r}" ${canEdit?'':'disabled'}>${r+1}</button>${cells}</div>`;
+    return`<div class="seat-row"><button class="seat-hdr-row ${ar.has(r)?'aisle-on':''}${editOn?' editable':''}" data-act="seat-toggle-row" data-i="${r}" ${editOn?'':'disabled'}>${r+1}</button>${cells}</div>`;
   }).join('');
   return pageHead('좌석배치',`${esc(ev.title)} · ${egs.length}명${overflow?` · 배치 안 됨 ${overflow}명`:''}`,right)
     +`<div class="card"><div class="card-body">
+      ${resizePanel}
       <div class="seat-stage">무대</div>
       <div class="seat-wrap">${colHdrs}${bodyRows}</div>
+      ${IS_TOUCH?'<p class="hint" style="margin-top:8px">자리를 탭해 선택한 뒤, 이동할 자리를 다시 탭하세요.</p>':''}
     </div></div>`;
 }
 function renderOrder(){
@@ -1462,6 +1482,8 @@ function renderOrder(){
     <div class="card"><div class="card-head"><h3>확정 소개 순서 (드래그·▲▼로 조정)</h3></div>
       <div class="card-body" id="ord-list">${cards||emptyState('배정된 내빈이 없습니다')}</div></div>`;
 }
+let TAP_SEAT_EG=null;
+const IS_TOUCH=false;
 let dragEg=null;
 let dragSeatEg=null;
 function initOrderDnD(){
@@ -2134,14 +2156,18 @@ const ACTS={
   'asgn-all':el=>document.querySelectorAll('.asgn-cb').forEach(c=>{if(!c.dataset.arrived||el.dataset.v==='1')c.checked=el.dataset.v==='1'}),
   'commit-assign':()=>commitAssign(),
   'ord-auto':()=>autoRecommend(),
-  'seat-toggle-row':el=>{if(!can('seating.edit'))return;const ev=currentEvent();if(!ev||!ev.seatConfig)return;
+  'seat-toggle-row':el=>{if(!can('seating.edit')||!SEAT_EDIT_MODE)return;const ev=currentEvent();if(!ev||!ev.seatConfig)return;
     const i=+el.dataset.i;const idx=ev.seatConfig.aisleRows.indexOf(i);
     if(idx===-1)ev.seatConfig.aisleRows.push(i);else ev.seatConfig.aisleRows.splice(idx,1);
     save(['events']);audit('event',ev.id,'seat_aisle_toggle',null,{row:i,on:idx===-1},ev.id);rerender()},
-  'seat-toggle-col':el=>{if(!can('seating.edit'))return;const ev=currentEvent();if(!ev||!ev.seatConfig)return;
+  'seat-toggle-col':el=>{if(!can('seating.edit')||!SEAT_EDIT_MODE)return;const ev=currentEvent();if(!ev||!ev.seatConfig)return;
     const i=+el.dataset.i;const idx=ev.seatConfig.aisleCols.indexOf(i);
     if(idx===-1)ev.seatConfig.aisleCols.push(i);else ev.seatConfig.aisleCols.splice(idx,1);
     save(['events']);audit('event',ev.id,'seat_aisle_toggle',null,{col:i,on:idx===-1},ev.id);rerender()},
+  'seat-edit-toggle':()=>{SEAT_EDIT_MODE=!SEAT_EDIT_MODE;rerender()},
+  'seat-resize-apply':()=>{if(!can('seating.edit'))return;const ev=currentEvent();if(!ev||!ev.seatConfig)return;
+    const{cols,rows}=applySeatResize(ev,$('seat-cols-input').value,$('seat-rows-input').value);
+    save(['events']);audit('event',ev.id,'seat_resize',null,{cols,rows},ev.id);rerender()},
   'seat-auto':()=>{const ev=currentEvent();if(!ev)return;const r=autoAssignSeats(ev.id);
     toast(`추천배치 적용 완료${r.overflow?` · 배치 안 됨 ${r.overflow}명`:''}`,'ok');rerender()},
   'ord-versions':()=>showVersions(),
