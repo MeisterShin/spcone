@@ -910,14 +910,15 @@ function sortByOrder(evId){const ranked=computeOrder(evId);const idx={};ranked.f
   return(a,b)=>(idx[a.id]??999)-(idx[b.id]??999)}
 
 // ── 15. 현장 체크인 ─────────────────────────────────
-let CI_FILTER='all',CI_Q='';
+let CI_FILTER='all',CI_Q='',CI_SHOW_PHOTO=false;
 function renderCI(){
   const ev=currentEvent();
   const right=`${eventSelector()}
     <button class="btn ${DEMO_OFFLINE?'btn-w':'btn-s'} btn-sm" data-act="demo-offline">${DEMO_OFFLINE?'오프라인 해제':'오프라인 시연'}</button>
+    <button class="btn ${CI_SHOW_PHOTO?'btn-w':'btn-s'} btn-sm" data-act="ci-toggle-photo">${CI_SHOW_PHOTO?'사진 숨기기':'VIP 사진 표시'}</button>
     ${can('checkin.do')?`<button class="btn btn-s btn-sm" data-act="urgent-add">긴급 내빈 추가</button>`:''}`;
   if(!ev)return pageHead('현장 체크인','',right)+emptyState('행사를 선택하세요');
-  const gates=ev.gates||[];const hasGates=gates.length>0;
+  const gates=ev.gates||[];const hasGates=gates.length>0&&ev.gatesEnabled!==false;
   const egs=egOf(ev.id);const arr=egs.filter(g=>isArrived(g.arrivalStatus)).length;
   const pct=egs.length?Math.round(arr/egs.length*100):0;
   const q=CI_Q.toLowerCase().replace(/\s/g,'');
@@ -931,7 +932,9 @@ function renderCI(){
 
   const cards=list.map(eg=>{const g=guestOf(eg);const done=isArrived(eg.arrivalStatus);const vv=eg.protocolLevel==='VVIP';
     const dup=S.guests.filter(x=>x.isActive&&x.name===g.name).length>1;
-    const top=`<div class="ci-top"><div class="av av32 ${avCls(eg.protocolLevel)}">${esc(dispName(eg)[0]||'?')}</div>
+    const showPhoto=CI_SHOW_PHOTO&&(eg.protocolLevel==='VVIP'||eg.protocolLevel==='VIP')&&g.photo;
+    const avatarHtml=showPhoto?`<img class="av av32" src="${g.photo}" style="object-fit:cover">`:`<div class="av av32 ${avCls(eg.protocolLevel)}">${esc(dispName(eg)[0]||'?')}</div>`;
+    const top=`<div class="ci-top">${avatarHtml}
         <div style="flex:1;min-width:0"><div class="ci-name">${esc(dispName(eg))} ${levelBadge(eg.protocolLevel)}${eg.attendanceType==='representative'?'<span class="badge brep">대리</span>':''}</div>
           <div class="ci-sub">${esc(dispPos(eg))}</div><div class="ci-sub">${esc(g.org||'')}${dup?' ⚠ 동명이인':''}</div></div></div>`;
     if(hasGates&&!done){
@@ -1150,7 +1153,7 @@ function renderPaste(){
       <div class="card-body">
         <div style="margin-bottom:10px">${Object.keys(SAMPLES).map(k=>`<span class="chip" data-act="paste-sample" data-k="${k}">▶ ${k==='tab'?'탭':k==='comma'?'쉼표':'이름만'} 샘플</span>`).join('')}</div>
         <div class="paste-area"><textarea class="paste-ta" id="paste-ta" placeholder="이름  소속  직위  등급  그룹&#10;한 줄에 한 명씩 (탭 또는 쉼표 구분)"></textarea></div>
-        <p class="hint">열 순서: 이름 · 소속 · 직위 · 등급(VVIP/VIP/Guest) · 그룹. 이름만 있어도 등록됩니다. HTML·스크립트 문자열은 자동 무력화됩니다.</p>
+        <p class="hint">열 순서: 이름 · 소속 · 직위 · 등급(VVIP/VIP/Guest) · 그룹 · 차량번호(선택). 이름만 있어도 등록됩니다. HTML·스크립트 문자열은 자동 무력화됩니다.</p>
       </div></div>
       <div class="card"><div class="card-head"><h3>미리보기</h3><span id="prev-cnt" style="font-size:11px;color:var(--gray4)">대기 중</span></div>
         <div class="card-body" id="paste-preview"><div class="empty"><p>왼쪽에 명단을 붙여넣고 검증하세요</p></div></div></div>
@@ -1164,7 +1167,7 @@ function parsePaste(){
   lines.forEach(line=>{
     const sep=line.includes('\t')?'\t':',';
     const c=line.split(sep).map(x=>x.trim());
-    const[name='',org='',pos='',rawLvl='',grp='']=c;
+    const[name='',org='',pos='',rawLvl='',grp='',vehicleNo='']=c;
     const issues=[];
     if(!name){pasteRows.push({ok:false,name:line.slice(0,40),reason:'이름 없음'});return}
     if(/[<>]|script|onerror|onclick/i.test(line))issues.push('위험 문자 제거됨');
@@ -1177,13 +1180,13 @@ function parsePaste(){
     if(dupInDb)issues.push('기존 등록 중복 후보');
     const clean=v=>String(v).replace(/[<>]/g,'').slice(0,80);
     pasteRows.push({ok:true,warn:issues.length>0,skip:dupInFile,
-      name:clean(name),org:clean(org),pos:clean(pos),lvl,grp:GRP_LIST.includes(grp)?grp:'기타',issues});
+      name:clean(name),org:clean(org),pos:clean(pos),lvl,grp:GRP_LIST.includes(grp)?grp:'기타',vehicleNo:clean(vehicleNo),issues});
   });
   const ok=pasteRows.filter(r=>r.ok&&!r.skip).length,warn=pasteRows.filter(r=>r.warn&&!r.skip).length,sk=pasteRows.filter(r=>!r.ok||r.skip).length;
   $('prev-cnt').textContent=`정상 ${ok} · 주의 ${warn} · 제외 ${sk}`;
-  $('paste-preview').innerHTML=`<div class="tbl-wrap"><table class="ptbl"><thead><tr><th>이름</th><th>소속</th><th>직위</th><th>등급</th><th>비고</th></tr></thead>
+  $('paste-preview').innerHTML=`<div class="tbl-wrap"><table class="ptbl"><thead><tr><th>이름</th><th>소속</th><th>직위</th><th>등급</th><th>차량번호</th><th>비고</th></tr></thead>
     <tbody>${pasteRows.map(r=>`<tr class="${!r.ok||r.skip?'skip':r.warn?'warn':'ok'}">
-      <td>${esc(r.name)}</td><td>${esc(r.org||'—')}</td><td>${esc(r.pos||'—')}</td><td>${r.ok?esc(r.lvl):'—'}</td>
+      <td>${esc(r.name)}</td><td>${esc(r.org||'—')}</td><td>${esc(r.pos||'—')}</td><td>${r.ok?esc(r.lvl):'—'}</td><td>${esc(r.vehicleNo||'—')}</td>
       <td style="font-size:11px;color:var(--gray5)">${esc((r.reason?[r.reason]:r.issues||[]).join(', ')||'정상')}</td></tr>`).join('')}</tbody></table></div>
     <div style="margin-top:12px;display:flex;justify-content:flex-end;gap:8px">
       <button class="btn btn-p" data-act="paste-commit">정상·주의 ${ok+warn}건 등록</button></div>`;
@@ -1193,7 +1196,7 @@ function commitPaste(){
   if(!items.length){toast('등록할 항목이 없습니다','err');return}
   let added=0;
   items.forEach(r=>{S.guests.push({id:uid('g'),name:r.name,org:r.org,pos:r.pos,defaultLevel:r.lvl,grp:r.grp,
-    namePron:'',orgPron:'',publicNote:'',privateNote:'',eventRelevanceDefault:1,isActive:true,createdAt:now(),updatedAt:now()});added++});
+    namePron:'',orgPron:'',publicNote:'',privateNote:'',vehicleNo:r.vehicleNo||'',eventRelevanceDefault:1,isActive:true,createdAt:now(),updatedAt:now()});added++});
   save(['guests']);audit('guest','batch','import',null,{count:added});
   $('paste-ta').value='';pasteRows=[];
   toast(`${added}명 등록 완료`,'ok');nav('guests');
@@ -1285,7 +1288,7 @@ function commitAssign(){
     toAdd.forEach(gid=>{const g=byId(S.guests,gid);
       S.eventGuests.push({id:uid('eg'),eventId:evId,guestId:gid,invitationStatus:'confirmed',attendanceType:'self',
         repName:'',repPos:'',protocolLevel:g.defaultLevel,protocolGroup:g.grp,eventRelevance:g.eventRelevanceDefault||1,
-        manualOrder:null,introType:'individual',receptionRequired:g.defaultLevel==='VVIP',receptionUserIds:[],receptionLocation:'',vehicleNo:'',parkingSpot:'',
+        manualOrder:null,introType:'individual',receptionRequired:g.defaultLevel==='VVIP',receptionUserIds:[],receptionLocation:'',vehicleNo:g.vehicleNo||'',parkingSpot:'',
         expectedArrivalAt:'',arrivalStatus:'expected',checkedInAt:null,checkedInBy:'',checkinMethod:'',
         publicNote:g.publicNote||'',privateNote:g.privateNote||'',synced:true,version:1,createdAt:now(),updatedAt:now()})});
     // 해제: 미도착자만 (상태 cancelled로 이력 보존, 물리삭제 금지)
@@ -1808,6 +1811,7 @@ function openNotifCenter(){
 // ── 28. 내빈 기본정보 모달 ──────────────────────────
 function openGuestModal(id,urgent){
   GUEST_EDIT=id||null;URGENT=!!urgent;const g=id?byId(S.guests,id):null;
+  GUEST_PHOTO_DRAFT=null;
   const f=(lbl,idn,val,type='text')=>`<div class="fl"><label>${lbl}</label><input class="inp" id="${idn}" value="${esc(val||'')}" ${type==='number'?'type="number"':''}></div>`;
   const body=`<div class="fg">
     <div class="fl fg-full"><label>이름 <span class="req">*</span></label><input class="inp" id="g-name" value="${esc(g?.name||'')}"></div>
@@ -1815,17 +1819,46 @@ function openGuestModal(id,urgent){
     <div class="fl"><label>의전 등급</label><select class="inp inp-sel" id="g-lvl">${['VVIP','VIP','Guest'].map(l=>`<option ${g?.defaultLevel===l?'selected':''}>${l}</option>`).join('')}</select></div>
     <div class="fl"><label>기관 그룹</label><select class="inp inp-sel" id="g-grp">${GRP_LIST.map(l=>`<option ${g?.grp===l?'selected':''}>${l}</option>`).join('')}</select></div>
     ${f('이름 발음','g-pron',g?.namePron)}${f('행사 관련성(0-3)','g-rel',g?.eventRelevanceDefault??1,'number')}
+    ${f('기본 차량번호','g-veh',g?.vehicleNo)}
+    <div class="fl fg-full"><label>사진</label><div style="display:flex;align-items:center;gap:10px">
+      <img id="g-photo-preview" src="${g?.photo||''}" style="width:56px;height:56px;border-radius:8px;object-fit:cover;background:var(--gray1);${g?.photo?'':'display:none'}">
+      <input type="file" accept="image/*" id="g-photo-file" data-act="g-photo-file">
+      ${g?.photo?'<button type="button" class="btn btn-g btn-xs" data-act="g-photo-rm">사진 제거</button>':''}
+    </div></div>
     <div class="fl fg-full"><label>공개 메모 (사회자·보고서 노출 가능)</label><input class="inp" id="g-npub" value="${esc(g?.publicNote||'')}"></div>
     <div class="fl fg-full"><label>비공개 메모 (총괄·담당자만 · 사회자 미노출)</label><input class="inp" id="g-npriv" value="${esc(g?.privateNote||'')}"></div>
   </div>${urgent?'<p class="hint" style="margin-top:8px">저장 시 현재 행사에 즉시 배정됩니다.</p>':''}`;
   openModal(urgent?'긴급 내빈 추가':id?'내빈 수정':'내빈 추가',body,[{label:'취소',cls:'btn-s',act:'close'},{label:'저장',cls:'btn-p',act:'save-guest'}]);
   setTimeout(()=>$('g-name')?.focus(),50);
 }
+let GUEST_PHOTO_DRAFT=null; // null=변경 없음, ''=제거, 데이터URL=신규 교체
+function resolvePhotoField(draft){return draft!==null?{photo:draft}:{}}
+function handlePhotoFile(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      const size=240;
+      const canvas=document.createElement('canvas');canvas.width=size;canvas.height=size;
+      const ctx=canvas.getContext('2d');
+      const scale=Math.max(size/img.width,size/img.height);
+      const w=img.width*scale,h=img.height*scale;
+      ctx.drawImage(img,(size-w)/2,(size-h)/2,w,h);
+      GUEST_PHOTO_DRAFT=canvas.toDataURL('image/jpeg',0.75);
+      const prev=$('g-photo-preview');if(prev){prev.src=GUEST_PHOTO_DRAFT;prev.style.display=''}
+    };
+    img.src=reader.result;
+  };
+  reader.readAsDataURL(file);
+}
 function saveGuest(){
   const name=$('g-name').value.trim();if(!name){toast('이름은 필수입니다','err');return}
   const d={name,org:$('g-org').value.trim(),pos:$('g-pos').value.trim(),defaultLevel:$('g-lvl').value,
     grp:$('g-grp').value,namePron:$('g-pron').value.trim(),eventRelevanceDefault:clamp(parseInt($('g-rel').value)||0,0,3),
+    vehicleNo:$('g-veh').value.trim(),
     publicNote:$('g-npub').value.trim(),privateNote:$('g-npriv').value.trim(),updatedAt:now()};
+  if(GUEST_PHOTO_DRAFT!==null)Object.assign(d,resolvePhotoField(GUEST_PHOTO_DRAFT));
   const dup=S.guests.some(g=>g.isActive&&g.name===name&&(g.org||'')===d.org&&g.id!==GUEST_EDIT);
   const commit=()=>{
     let gid=GUEST_EDIT;
@@ -1835,7 +1868,7 @@ function saveGuest(){
     if(URGENT){const evId=currentEventId();const g=byId(S.guests,gid);
       S.eventGuests.push({id:uid('eg'),eventId:evId,guestId:gid,invitationStatus:'confirmed',attendanceType:'self',
         repName:'',repPos:'',protocolLevel:g.defaultLevel,protocolGroup:g.grp,eventRelevance:g.eventRelevanceDefault||1,
-        manualOrder:null,introType:'individual',receptionRequired:g.defaultLevel==='VVIP',receptionUserIds:[],receptionLocation:'',vehicleNo:'',parkingSpot:'',
+        manualOrder:null,introType:'individual',receptionRequired:g.defaultLevel==='VVIP',receptionUserIds:[],receptionLocation:'',vehicleNo:g.vehicleNo||'',parkingSpot:'',
         expectedArrivalAt:'',arrivalStatus:'expected',checkedInAt:null,checkedInBy:'',checkinMethod:'',
         publicNote:g.publicNote,privateNote:g.privateNote,synced:true,version:1,createdAt:now(),updatedAt:now()});
       save(['eventGuests']);audit('eventGuest','urgent','urgent_add',null,{name},evId);}
@@ -1872,7 +1905,11 @@ function openEventModal(id){
     ${f('개인정보 보유기한','e-ret',ev?.retentionUntil,'date')}
     <div class="fl"><label>좌석 가로 칸수</label><input class="inp" type="number" id="e-cols" value="${ev?.seatConfig?.cols||10}" min="1"></div>
     <div class="fl"><label>좌석 세로 칸수</label><input class="inp" type="number" id="e-rows" value="${ev?.seatConfig?.rows||8}" min="1"></div>
-    <div class="fl fg-full"><label>게이트(동선)</label><div id="evt-gate-list">${renderGateRows()}</div>
+    <div class="fl fg-full"><label>게이트(동선)</label>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12.5px;color:var(--gray6)">
+        <input type="checkbox" id="e-gates-on" ${ev?.gatesEnabled!==false?'checked':''} style="accent-color:var(--green)">
+        게이트 모드 사용 — 끄면 현장 체크인에서 단일 체크인 버튼만 표시</label>
+      <div id="evt-gate-list">${renderGateRows()}</div>
       <button type="button" class="btn btn-g btn-xs" data-act="evt-gate-add" style="margin-top:6px">+ 게이트 추가</button></div>
   </div>`;
   GUEST_EDIT=null;EG_EDIT=id||'new-event';
@@ -1886,7 +1923,7 @@ function saveEvent(){
   const rows=clamp(parseInt($('e-rows').value)||8,1,40);
   const d={title,type:$('e-type').value,date,startTime:$('e-start').value,endTime:$('e-end').value,
     loc:$('e-loc').value.trim(),hostDept:$('e-host').value.trim(),desc:$('e-desc').value.trim(),retentionUntil:$('e-ret').value,
-    gates:sanitizeGates(EVT_GATES),updatedAt:now()};
+    gates:sanitizeGates(EVT_GATES),gatesEnabled:$('e-gates-on').checked,updatedAt:now()};
   const id=EG_EDIT;
   if(id&&id!=='new-event'){
     const ev=byId(S.events,id);Object.assign(ev,d);
@@ -2065,6 +2102,8 @@ const ACTS={
   'toggle-sb':()=>toggleSB(),
   'nav':el=>nav(el.dataset.view),
   'demo-offline':()=>toggleDemoOffline(),
+  'g-photo-rm':()=>{GUEST_PHOTO_DRAFT='';const prev=$('g-photo-preview');if(prev){prev.src='';prev.style.display='none'}},
+  'ci-toggle-photo':()=>{CI_SHOW_PHOTO=!CI_SHOW_PHOTO;rerender()},
   'notif-center':()=>openNotifCenter(),
   'do-ci':el=>doCheckin(el.dataset.id),
   'gate-toggle':el=>toggleGatePass(el.dataset.id,el.dataset.gate),
@@ -2160,7 +2199,8 @@ document.addEventListener('input',e=>{
 document.addEventListener('change',e=>{const a=e.target.dataset.act;
   if(a==='sel-event'){SEL=e.target.value;rerender()}
   else if(a==='sc-absent'){SC_INCLUDE_ABSENT=e.target.checked;rerender()}
-  else if(a==='rpt-privacy'){RPT_PRIVACY=e.target.checked;rerender()}});
+  else if(a==='rpt-privacy'){RPT_PRIVACY=e.target.checked;rerender()}
+  else if(a==='g-photo-file'){handlePhotoFile(e.target.files[0])}});
 
 // ── 33. 초기화 ──────────────────────────────────────
 function bootApp(){
