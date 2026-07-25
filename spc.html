@@ -310,6 +310,7 @@ tbody tr:hover{background:var(--gray1)}
 .seat-occ{cursor:grab}
 .seat-occ.dragging{opacity:.4}
 .seat-cell.over{outline:2px solid var(--green);outline-offset:1px}
+.seat-cell.seat-selected{outline:2px solid var(--green);outline-offset:1px}
 .ord-num{width:26px;height:26px;border-radius:50%;background:var(--green-l);color:var(--green);font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .ord-reasons{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
 .reason-tag{font-size:10px;background:var(--green-l);color:var(--green);border:1px solid var(--green-b);border-radius:5px;padding:2px 6px}
@@ -1483,7 +1484,7 @@ function renderOrder(){
       <div class="card-body" id="ord-list">${cards||emptyState('배정된 내빈이 없습니다')}</div></div>`;
 }
 let TAP_SEAT_EG=null;
-const IS_TOUCH=false;
+const IS_TOUCH=typeof window!=='undefined'&&typeof window.matchMedia==='function'&&window.matchMedia('(pointer: coarse)').matches;
 let dragEg=null;
 let dragSeatEg=null;
 function initOrderDnD(){
@@ -1496,7 +1497,28 @@ function initOrderDnD(){
       reorderEg(dragEg,card.dataset.eg)});
   });
 }
+function seatTapAction(selectedEgId,tappedEgId,tappedRow,tappedCol){
+  if(selectedEgId==null)return tappedEgId?{action:'select',egId:tappedEgId}:{action:'none'};
+  if(tappedEgId===selectedEgId)return{action:'deselect'};
+  if(tappedEgId)return{action:'swap',a:selectedEgId,b:tappedEgId};
+  if(tappedRow!=null&&tappedCol!=null)return{action:'move',egId:selectedEgId,row:tappedRow,col:tappedCol};
+  return{action:'none'};
+}
 function initSeatDnD(){
+  if(IS_TOUCH){
+    document.querySelectorAll('.seat-cell[data-row]').forEach(cell=>{
+      cell.addEventListener('click',()=>{
+        const row=cell.dataset.row!=null?+cell.dataset.row:null;
+        const col=cell.dataset.col!=null?+cell.dataset.col:null;
+        const act=seatTapAction(TAP_SEAT_EG,cell.dataset.eg||null,row,col);
+        if(act.action==='select'){TAP_SEAT_EG=act.egId;rerender()}
+        else if(act.action==='deselect'){TAP_SEAT_EG=null;rerender()}
+        else if(act.action==='swap'){swapSeats(currentEventId(),act.a,act.b);TAP_SEAT_EG=null;rerender()}
+        else if(act.action==='move'){moveSeatTo(act.egId,act.row,act.col);TAP_SEAT_EG=null;rerender()}
+      });
+    });
+    return;
+  }
   document.querySelectorAll('.seat-cell[data-row]').forEach(cell=>{
     if(cell.classList.contains('seat-occ')){
       cell.addEventListener('dragstart',()=>{dragSeatEg=cell.dataset.eg;cell.classList.add('dragging')});

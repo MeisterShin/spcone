@@ -30,7 +30,7 @@ let pass=0,fail=0;const ok=(n,c)=>{c?(pass++,console.log('  ✓',n)):(fail++,con
 // ── 로직 + 렌더 ──
 store.clear();MOCK_QS={};
 const sb=makeSandbox(false);
-vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},setShowPhoto:b=>{CI_SHOW_PHOTO=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception,renderLogin,seatPriorityCoords,autoAssignSeats,swapSeats,moveSeatTo,renderSeating,addGate,removeGate,sanitizeGates,toggleGatePass,renderCI,resolvePhotoField,applySeatResize,setSeatEditMode:b=>{SEAT_EDIT_MODE=b}};`,sb);
+vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},setShowPhoto:b=>{CI_SHOW_PHOTO=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception,renderLogin,seatPriorityCoords,autoAssignSeats,swapSeats,moveSeatTo,renderSeating,addGate,removeGate,sanitizeGates,toggleGatePass,renderCI,resolvePhotoField,applySeatResize,setSeatEditMode:b=>{SEAT_EDIT_MODE=b},seatTapAction};`,sb);
 const A=sb.__API;A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
 const evId=A.S.events[0].id;
 
@@ -309,6 +309,14 @@ ok('복도 배열은 그대로 보존됨',editEv.seatConfig.aisleRows.length===1
 const clampResult=A.applySeatResize(editEv,'999','abc');
 ok('범위를 벗어나면 40으로 clamp',clampResult.cols===40);
 ok('숫자가 아니면 기본값(8) 사용',clampResult.rows===8);
+
+console.log('\n[좌석 탭 이동 로직]');
+ok('선택 없음 + 사람 있는 칸 탭 → select',JSON.stringify(A.seatTapAction(null,'egA',1,1))===JSON.stringify({action:'select',egId:'egA'}));
+ok('선택 없음 + 빈 칸 탭 → none',A.seatTapAction(null,null,1,1).action==='none');
+ok('선택된 자리를 다시 탭 → deselect',A.seatTapAction('egA','egA',1,1).action==='deselect');
+ok('선택 있음 + 다른 사람 자리 탭 → swap',JSON.stringify(A.seatTapAction('egA','egB',2,2))===JSON.stringify({action:'swap',a:'egA',b:'egB'}));
+ok('선택 있음 + 빈 자리 탭 → move',JSON.stringify(A.seatTapAction('egA',null,3,3))===JSON.stringify({action:'move',egId:'egA',row:3,col:3}));
+ok('선택 있음 + 복도 칸(행/열 정보 없음) 탭 → none(선택 유지)',A.seatTapAction('egA',null,null,null).action==='none');
 
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');
