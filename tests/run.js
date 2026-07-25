@@ -30,7 +30,7 @@ let pass=0,fail=0;const ok=(n,c)=>{c?(pass++,console.log('  ✓',n)):(fail++,con
 // ── 로직 + 렌더 ──
 store.clear();MOCK_QS={};
 const sb=makeSandbox(false);
-vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},setShowPhoto:b=>{CI_SHOW_PHOTO=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception,renderLogin,seatPriorityCoords,autoAssignSeats,swapSeats,moveSeatTo,renderSeating,addGate,removeGate,sanitizeGates,toggleGatePass,renderCI,resolvePhotoField};`,sb);
+vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},setShowPhoto:b=>{CI_SHOW_PHOTO=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception,renderLogin,seatPriorityCoords,autoAssignSeats,swapSeats,moveSeatTo,renderSeating,addGate,removeGate,sanitizeGates,toggleGatePass,renderCI,resolvePhotoField,applySeatResize,setSeatEditMode:b=>{SEAT_EDIT_MODE=b},seatTapAction};`,sb);
 const A=sb.__API;A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
 const evId=A.S.events[0].id;
 
@@ -286,6 +286,37 @@ switchEv.gatesEnabled=true;
 ok('gatesEnabled=true(명시)면 게이트 모드',A.renderCI().includes('gate-btn'));
 delete switchEv.gatesEnabled;
 ok('gatesEnabled 미설정(기존 행사)이고 게이트가 있으면 기본적으로 게이트 모드(회귀 없음)',A.renderCI().includes('gate-btn'));
+
+console.log('\n[좌석배치 인라인 편집모드]');
+A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
+const editEv=A.byId(A.S.events,evId);
+editEv.seatConfig={cols:5,rows:4,aisleRows:[1],aisleCols:[2]};
+A.setSeatEditMode(false);
+const offHtml=A.renderSeating();
+ok('편집모드 꺼짐 상태에서는 복도 열 헤더가 비활성화됨',offHtml.includes('data-act="seat-toggle-col" data-i="0" disabled>'));
+ok('편집모드 꺼짐 상태에서는 칸수 입력란이 없음',!offHtml.includes('seat-cols-input'));
+A.setSeatEditMode(true);
+const onHtml=A.renderSeating();
+ok('편집모드 켜짐 상태에서는 복도 열 헤더가 활성화됨',onHtml.includes('data-act="seat-toggle-col" data-i="0" >'));
+ok('편집모드 켜짐 상태에서 칸수 입력란이 노출됨',onHtml.includes('seat-cols-input')&&onHtml.includes('seat-rows-input'));
+ok('편집모드 켜짐 상태에서 헤더에 editable 클래스 부여',onHtml.includes('editable'));
+A.setSeatEditMode(false);
+
+const resizeResult=A.applySeatResize(editEv,'7','6');
+ok('applySeatResize가 clamp된 cols/rows 반환',resizeResult.cols===7&&resizeResult.rows===6);
+ok('ev.seatConfig에 반영됨',editEv.seatConfig.cols===7&&editEv.seatConfig.rows===6);
+ok('복도 배열은 그대로 보존됨',editEv.seatConfig.aisleRows.length===1&&editEv.seatConfig.aisleRows[0]===1&&editEv.seatConfig.aisleCols[0]===2);
+const clampResult=A.applySeatResize(editEv,'999','abc');
+ok('범위를 벗어나면 40으로 clamp',clampResult.cols===40);
+ok('숫자가 아니면 기본값(8) 사용',clampResult.rows===8);
+
+console.log('\n[좌석 탭 이동 로직]');
+ok('선택 없음 + 사람 있는 칸 탭 → select',JSON.stringify(A.seatTapAction(null,'egA',1,1))===JSON.stringify({action:'select',egId:'egA'}));
+ok('선택 없음 + 빈 칸 탭 → none',A.seatTapAction(null,null,1,1).action==='none');
+ok('선택된 자리를 다시 탭 → deselect',A.seatTapAction('egA','egA',1,1).action==='deselect');
+ok('선택 있음 + 다른 사람 자리 탭 → swap',JSON.stringify(A.seatTapAction('egA','egB',2,2))===JSON.stringify({action:'swap',a:'egA',b:'egB'}));
+ok('선택 있음 + 빈 자리 탭 → move',JSON.stringify(A.seatTapAction('egA',null,3,3))===JSON.stringify({action:'move',egId:'egA',row:3,col:3}));
+ok('선택 있음 + 복도 칸(행/열 정보 없음) 탭 → none(선택 유지)',A.seatTapAction('egA',null,null,null).action==='none');
 
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');
