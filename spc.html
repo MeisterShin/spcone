@@ -918,7 +918,7 @@ function renderCI(){
     <button class="btn ${CI_SHOW_PHOTO?'btn-w':'btn-s'} btn-sm" data-act="ci-toggle-photo">${CI_SHOW_PHOTO?'사진 숨기기':'VIP 사진 표시'}</button>
     ${can('checkin.do')?`<button class="btn btn-s btn-sm" data-act="urgent-add">긴급 내빈 추가</button>`:''}`;
   if(!ev)return pageHead('현장 체크인','',right)+emptyState('행사를 선택하세요');
-  const gates=ev.gates||[];const hasGates=gates.length>0;
+  const gates=ev.gates||[];const hasGates=gates.length>0&&ev.gatesEnabled!==false;
   const egs=egOf(ev.id);const arr=egs.filter(g=>isArrived(g.arrivalStatus)).length;
   const pct=egs.length?Math.round(arr/egs.length*100):0;
   const q=CI_Q.toLowerCase().replace(/\s/g,'');
@@ -1905,7 +1905,11 @@ function openEventModal(id){
     ${f('개인정보 보유기한','e-ret',ev?.retentionUntil,'date')}
     <div class="fl"><label>좌석 가로 칸수</label><input class="inp" type="number" id="e-cols" value="${ev?.seatConfig?.cols||10}" min="1"></div>
     <div class="fl"><label>좌석 세로 칸수</label><input class="inp" type="number" id="e-rows" value="${ev?.seatConfig?.rows||8}" min="1"></div>
-    <div class="fl fg-full"><label>게이트(동선)</label><div id="evt-gate-list">${renderGateRows()}</div>
+    <div class="fl fg-full"><label>게이트(동선)</label>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12.5px;color:var(--gray6)">
+        <input type="checkbox" id="e-gates-on" ${ev?.gatesEnabled!==false?'checked':''} style="accent-color:var(--green)">
+        게이트 모드 사용 — 끄면 현장 체크인에서 단일 체크인 버튼만 표시</label>
+      <div id="evt-gate-list">${renderGateRows()}</div>
       <button type="button" class="btn btn-g btn-xs" data-act="evt-gate-add" style="margin-top:6px">+ 게이트 추가</button></div>
   </div>`;
   GUEST_EDIT=null;EG_EDIT=id||'new-event';
@@ -1919,7 +1923,7 @@ function saveEvent(){
   const rows=clamp(parseInt($('e-rows').value)||8,1,40);
   const d={title,type:$('e-type').value,date,startTime:$('e-start').value,endTime:$('e-end').value,
     loc:$('e-loc').value.trim(),hostDept:$('e-host').value.trim(),desc:$('e-desc').value.trim(),retentionUntil:$('e-ret').value,
-    gates:sanitizeGates(EVT_GATES),updatedAt:now()};
+    gates:sanitizeGates(EVT_GATES),gatesEnabled:$('e-gates-on').checked,updatedAt:now()};
   const id=EG_EDIT;
   if(id&&id!=='new-event'){
     const ev=byId(S.events,id);Object.assign(ev,d);

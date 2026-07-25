@@ -276,6 +276,17 @@ ok('사진 표시 켜면 VIP 사진 데이터가 렌더링됨',A.renderCI().incl
 A.setShowPhoto(false);
 ok('사진 표시 끄면 기존처럼 이니셜만(사진 데이터 노출 안 됨)',!A.renderCI().includes('data:image/jpeg;base64,ABCDEF'));
 
+console.log('\n[게이트 모드 스위치]');
+A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
+const switchEv=A.byId(A.S.events,evId);
+switchEv.gates=[{id:'sw1',name:'테스트게이트'}];
+switchEv.gatesEnabled=false;
+ok('gatesEnabled=false면 게이트가 있어도 단일 체크인 모드(gate-btn 없음)',!A.renderCI().includes('gate-btn'));
+switchEv.gatesEnabled=true;
+ok('gatesEnabled=true(명시)면 게이트 모드',A.renderCI().includes('gate-btn'));
+delete switchEv.gatesEnabled;
+ok('gatesEnabled 미설정(기존 행사)이고 게이트가 있으면 기본적으로 게이트 모드(회귀 없음)',A.renderCI().includes('gate-btn'));
+
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');
 store.clear();MOCK_QS={};
