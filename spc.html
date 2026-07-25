@@ -1508,6 +1508,7 @@ function initSeatDnD(){
   if(IS_TOUCH){
     document.querySelectorAll('.seat-cell[data-row]').forEach(cell=>{
       cell.addEventListener('click',()=>{
+        if(!can('seating.edit'))return;
         const row=cell.dataset.row!=null?+cell.dataset.row:null;
         const col=cell.dataset.col!=null?+cell.dataset.col:null;
         const act=seatTapAction(TAP_SEAT_EG,cell.dataset.eg||null,row,col);
