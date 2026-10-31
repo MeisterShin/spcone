@@ -43,6 +43,8 @@
 - `events` 핵심 필드에 `seatConfig{cols,rows,aisleRows[],aisleCols[]}`(좌석 그리드 크기·복도 행/열), `gates[{id,name}]`(동선 게이트 목록, 배열의 마지막 항목=최종 체크인과 동일 취급), `gatesEnabled`(boolean, 게이트 목록은 유지한 채 게이트 모드/단일 체크인 버튼 모드 전환 — 미설정(기존 행사)이거나 `true`면 게이트 있을 때 게이트 모드, 명시적 `false`만 단일 버튼 모드) 포함.
 - `guests`(내빈 기본정보 마스터) 핵심 필드에 `vehicleNo`(기본 차량번호, 행사 배정 시 `eventGuests.vehicleNo`로 상속되며 행사별 개별 수정 가능), `photo`(base64 데이터 URI, 클라이언트에서 240×240 리사이즈·압축, 현장 체크인 VVIP/VIP 카드에서 토글로 확인) 포함.
 - `checkinLogs.action`에 `gate_pass`/`gate_undo`(동선 게이트 통과/취소, 대시보드 활동 로그에는 노출 안 함) 포함.
+- 진행 단계 전환은 `setStage(egId,next)`만 사용(허용 전환표 `STAGE_FROM`: 도착·영접완료→착석, 착석→퇴장, 예정·이동중↔불참). `checkinLogs.action`에 `seated`/`departed`/`absent`/`absent_undo`가 남고, `eventGuests`에 `seatedAt`/`departedAt`이 기록됨. 불참자는 위험 레이더·VVIP 미도착·자동 좌석배치에서 제외.
+- 시각 입력(`HH:MM`)은 `isoAt(행사일, 시각)`으로 행사일 기준 ISO로 변환(오늘 날짜로 고정하지 말 것). 앞 게이트를 건너뛰면 확인창, 마지막 게이트 통과는 실제 도착 처리 시점에만 기록(`doCheckin(egId,onCommit)`).
 - 저장값은 영문 코드, 화면 표기는 한글(`ARR_LABEL`,`ATT_LABEL`).
 
 ## 디자인 시스템 (Notion 비즈니스 스타일)

@@ -404,7 +404,7 @@ const fmtDT=iso=>{if(!iso)return'';const d=new Date(iso);return isNaN(d)?'':`${d
 const fmtD=d=>{if(!d)return'';try{return new Date(d).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'})}catch{return d}};
 const fmtDuration=ms=>{if(ms==null)return'—';const m=Math.floor(ms/60000);return m<1?'1분 미만':`${m}분`};
 const todayStr=()=>new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
-const todayISO=()=>new Date().toISOString().slice(0,10);
+const todayISO=()=>{const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}; // 현지(KST) 날짜
 const $=id=>document.getElementById(id);
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const byId=(arr,id)=>arr.find(x=>x.id===id);
@@ -750,6 +750,11 @@ function arrBadge(s){const m={expected:'bwait',en_route:'bvip',arrived:'barr',re
   return`<span class="badge ${m[s]||'bg'}">${dot}${esc(ARR_LABEL[s]||s)}</span>`}
 const ATT_LABEL={self:'본인',representative:'대리',companion:'수행'};
 const isArrived=s=>['arrived','reception_complete','seated','departed'].includes(s);
+// 'HH:MM'을 기준일(YYYY-MM-DD, 현지시각) 날짜의 ISO 시각으로 변환. 기준일이 없거나 형식이 틀리면 오늘.
+function isoAt(dateStr,hhmm){const[h,m]=String(hhmm).split(':').map(Number);
+  const p=/^\d{4}-\d{2}-\d{2}$/.test(dateStr||'')?dateStr.split('-').map(Number):null;
+  const d=p?new Date(p[0],p[1]-1,p[2],h,m,0,0):new Date();if(!p)d.setHours(h,m,0,0);return d.toISOString()}
+const localDate=iso=>{const d=new Date(iso);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
 function events(){return S.events.filter(e=>eventAllowed(e.id))}
 function activeEvents(){return events().filter(e=>e.status!=='archived'&&e.status!=='closed')}
 let SEL=null;
@@ -795,10 +800,10 @@ function riskRadar(evId){
     if(eg.protocolLevel==='VVIP'&&eg.arrivalStatus==='arrived'&&!eg.receptionUserIds.length)
       out.push({lv:'danger',msg:`${nm} ${dispPos(eg)} 도착 — 영접 담당자 미확인`,sub:'즉시 영접 담당자를 지정하세요'});
     // 주의: VVIP 예정시각 경과 미도착
-    if(eg.protocolLevel==='VVIP'&&!isArrived(eg.arrivalStatus)&&eg.expectedArrivalAt&&new Date(eg.expectedArrivalAt)<new Date())
+    if(eg.protocolLevel==='VVIP'&&!isArrived(eg.arrivalStatus)&&eg.arrivalStatus!=='absent'&&eg.expectedArrivalAt&&new Date(eg.expectedArrivalAt)<new Date())
       out.push({lv:'warn',msg:`${nm} ${dispPos(eg)} 도착 예정시각 경과`,sub:`예정 ${fmt(eg.expectedArrivalAt)} · 현재 미도착`});
     // 주의: VVIP 영접 담당 미지정(도착 전)
-    if(eg.protocolLevel==='VVIP'&&eg.receptionRequired&&!eg.receptionUserIds.length&&!isArrived(eg.arrivalStatus))
+    if(eg.protocolLevel==='VVIP'&&eg.receptionRequired&&!eg.receptionUserIds.length&&!isArrived(eg.arrivalStatus)&&eg.arrivalStatus!=='absent')
       out.push({lv:'warn',msg:`${nm} 영접 담당자 미배정`,sub:'VVIP 영접 계획을 확인하세요'});
   });
   // 오프라인 단말
@@ -846,19 +851,20 @@ function renderDash(){
   const invited=S.eventGuests.filter(g=>g.eventId===ev.id);
   const confirmed=egs.filter(g=>g.invitationStatus==='confirmed');
   const arrived=egs.filter(g=>isArrived(g.arrivalStatus));
-  const pending=egs.filter(g=>!isArrived(g.arrivalStatus));
+  const absent=egs.filter(g=>g.arrivalStatus==='absent');
+  const pending=egs.filter(g=>!isArrived(g.arrivalStatus)&&g.arrivalStatus!=='absent');
   const vv=egs.filter(g=>g.protocolLevel==='VVIP');
   const vvArr=vv.filter(g=>isArrived(g.arrivalStatus));
   const recWait=egs.filter(g=>g.arrivalStatus==='arrived'&&g.receptionRequired);
   const notSeated=arrived.filter(g=>g.arrivalStatus!=='seated'&&g.arrivalStatus!=='departed');
   const pct=egs.length?Math.round(arrived.length/egs.length*100):0;
-  const vvPend=vv.filter(g=>!isArrived(g.arrivalStatus));
+  const vvPend=vv.filter(g=>!isArrived(g.arrivalStatus)&&g.arrivalStatus!=='absent');
 
   const stat=(n,l,x,cls)=>`<div class="stat ${cls||''}"><div class="stat-n">${n}</div><div class="stat-l">${esc(l)}</div>${x?`<div class="stat-x">${esc(x)}</div>`:''}</div>`;
   const statsHtml=`<div class="stats">
     ${stat(egs.length,'참석 확정','초청 '+invited.length+'명')}
     ${stat(arrived.length,'도착','',pct>=70?'st-green':'')}
-    ${stat(pending.length,'미도착','',pending.length?'st-amber':'')}
+    ${stat(pending.length,'미도착',absent.length?'불참 '+absent.length+'명 별도':'',pending.length?'st-amber':'')}
     ${stat(`${vvArr.length}/${vv.length}`,'VVIP 도착',vvPend.length?vvPend.length+'명 대기':'전원 도착',vvPend.length?'st-red':'st-green')}
     ${stat(pct+'%','도착률')}
     ${stat(recWait.length,'영접 대기','',recWait.length?'st-red':'')}
@@ -886,7 +892,7 @@ function renderDash(){
 
   const recent=[...S.checkinLogs].filter(l=>l.eventId===ev.id&&l.action!=='gate_pass'&&l.action!=='gate_undo').reverse().slice(0,14);
   const logHtml=recent.length?recent.map(l=>{const eg=byId(S.eventGuests,l.eventGuestId);const nm=eg?dispName(eg):'내빈';
-    const act={checkin:'도착',undo:'체크인 취소',time_edit:'시각 수정',reception_complete:'영접 완료',seated:'착석',departed:'퇴장'}[l.action]||l.action;
+    const act={checkin:'도착',undo:'체크인 취소',time_edit:'시각 수정',reception_complete:'영접 완료',seated:'착석',departed:'퇴장',absent:'불참',absent_undo:'불참 해제'}[l.action]||l.action;
     const type=l.action==='undo'?'warn':'ok';
     return`<div class="log-item"><span class="log-time">${fmt(l.createdAt)}</span><span class="log-dot ld-${type}"></span>
       <div><div class="log-msg">${esc(nm)} · ${esc(act)}</div><div class="log-sub">${esc(l.userName||'')}${l.reason?' · '+esc(l.reason):''}</div></div></div>`}).join('')
@@ -952,7 +958,7 @@ function renderCI(){
     return`<button class="ci-card${done?' ci-done':''}${vv?' ci-vv':''}" data-act="do-ci" data-id="${eg.id}">
       ${top}
       <div class="ci-bot">${done?`<span class="ci-time">✓ ${fmt(eg.checkedInAt)}</span><span style="font-size:11px">${esc(ARR_LABEL[eg.arrivalStatus])}</span>`
-        :`<span class="ci-hint">${eg.synced===false?'기기 저장됨':'탭하여 체크인'}</span>${vv?'<span style="font-size:10px;color:var(--red);font-weight:800">VVIP 확인</span>':''}`}</div>
+        :`<span class="ci-hint">${eg.synced===false?'기기 저장됨':eg.arrivalStatus==='absent'?'불참 · 탭하면 도착 처리':'탭하여 체크인'}</span>${vv?'<span style="font-size:10px;color:var(--red);font-weight:800">VVIP 확인</span>':''}`}</div>
     </button>`}).join('');
 
   return pageHead('현장 체크인',`${esc(ev.title)}${hasGates?` · 게이트 ${gates.length}개`:''}`,right)
@@ -975,7 +981,7 @@ function choseong(s){let o='';for(const ch of String(s||'')){const c=ch.charCode
 
 // 체크인 트랜잭션 (멱등 · 오프라인 큐 · 실행취소)
 let CI_BUSY=new Set();
-function doCheckin(egId){
+function doCheckin(egId,onCommit){ // onCommit: 실제 도착 처리 직전에 함께 기록할 작업(마지막 게이트 통과 등)
   if(CI_BUSY.has(egId))return; // 중복클릭 방지
   const eg=byId(S.eventGuests,egId);if(!eg)return;
   if(!can('checkin.do')){toast('체크인 권한이 없습니다','err');return}
@@ -985,6 +991,7 @@ function doCheckin(egId){
   CI_BUSY.add(egId);setTimeout(()=>CI_BUSY.delete(egId),600);
   const g=guestOf(eg);
   const doIt=()=>{
+    if(onCommit)onCommit();
     const prev=eg.arrivalStatus;const key=uid('k');const t=now();
     eg.arrivalStatus='arrived';eg.checkedInAt=t;eg.checkedInBy=CUR.name;eg.checkinMethod=isOnline()?'manual':'offline';
     eg.synced=isOnline()?true:false;eg.version=(eg.version||1)+1;eg.updatedAt=t;
@@ -1004,9 +1011,10 @@ function doCheckin(egId){
   };
   const g2=guestOf(eg);
   const dup=S.guests.filter(x=>x.isActive&&x.name===g2.name).length>1;
-  if(eg.protocolLevel==='VVIP'||dup){ // 확인 단계
+  const wasAbsent=eg.arrivalStatus==='absent';
+  if(eg.protocolLevel==='VVIP'||dup||wasAbsent){ // 확인 단계
     openConfirm(`${dispName(eg)} ${dispPos(eg)} 체크인`,
-      `${esc(g2.org||'')}${dup?'<br><b style="color:var(--amber)">동명이인이 있습니다. 대상이 맞는지 확인하세요.</b>':''}${eg.protocolLevel==='VVIP'?'<br>VVIP 내빈입니다.':''}`,
+      `${esc(g2.org||'')}${wasAbsent?'<br><b style="color:var(--amber)">불참으로 표시된 내빈입니다. 도착 처리하면 불참 표시가 해제됩니다.</b>':''}${dup?'<br><b style="color:var(--amber)">동명이인이 있습니다. 대상이 맞는지 확인하세요.</b>':''}${eg.protocolLevel==='VVIP'?'<br>VVIP 내빈입니다.':''}`,
       '도착 처리',doIt);
   }else doIt();
 }
@@ -1028,6 +1036,22 @@ function adminUndo(egId){
     undoCheckin(egId,'[관리자] '+reason);
   });
 }
+// 진행 단계 전환(착석·퇴장·불참/해제). 허용된 전환만 처리하고 체크인 로그·감사기록을 남긴다.
+const STAGE_FROM={seated:['arrived','reception_complete'],departed:['seated'],absent:['expected','en_route'],expected:['absent']};
+function setStage(egId,next){
+  const eg=byId(S.eventGuests,egId);if(!eg)return;
+  if(!can('checkin.do')){toast('체크인 권한이 없습니다','err');return}
+  if(!(STAGE_FROM[next]||[]).includes(eg.arrivalStatus)){toast('현재 상태에서는 바꿀 수 없습니다','err');return}
+  const prev=eg.arrivalStatus;const t=now();
+  eg.arrivalStatus=next;eg.version=(eg.version||1)+1;eg.updatedAt=t;
+  if(next==='seated')eg.seatedAt=t;if(next==='departed')eg.departedAt=t;
+  const action=next==='expected'?'absent_undo':next;
+  pushCheckinLog({eventId:eg.eventId,eventGuestId:eg.id,action,previousStatus:prev,nextStatus:next,
+    previousTime:null,nextTime:t,reason:'',idempotencyKey:uid('k')});
+  save(['eventGuests','checkinLogs']);
+  audit('eventGuest',eg.id,'stage_'+action,{status:prev},{status:next},eg.eventId);
+  toast(`${dispName(eg)} ${next==='expected'?'불참 해제':ARR_LABEL[next]+' 처리'}`,'ok');rerender();
+}
 function toggleGatePass(egId,gateId){
   const eg=byId(S.eventGuests,egId);if(!eg)return;
   if(!can('checkin.do')){toast('체크인 권한이 없습니다','err');return}
@@ -1039,18 +1063,28 @@ function toggleGatePass(egId,gateId){
     audit('eventGuest',eg.id,'gate_undo',{gateId},null,eg.eventId);
     rerender();return;
   }
-  eg.gatesPassed[gateId]={at:now(),by:CUR.name};
-  eg.updatedAt=now();
-  const key=uid('k');
-  const logData={eventId:eg.eventId,eventGuestId:eg.id,action:'gate_pass',gateId,
-    previousStatus:eg.arrivalStatus,nextStatus:eg.arrivalStatus,previousTime:null,nextTime:now(),reason:'',idempotencyKey:key};
-  if(!isOnline()){const log=makeLog(logData);S.queue.push({egId:eg.id,idempotencyKey:key,log});save(['eventGuests','queue'],{silent:true})}
-  else{pushCheckinLog(logData);save(['eventGuests','checkinLogs'])}
-  audit('eventGuest',eg.id,'gate_pass',null,{gateId},eg.eventId);
   const ev=byId(S.events,eg.eventId);const gates=ev?.gates||[];
-  const isLast=gates.length&&gates[gates.length-1].id===gateId;
-  if(isLast)doCheckin(egId);
-  else rerender();
+  const idx=gates.findIndex(g=>g.id===gateId);
+  const isLast=gates.length&&idx===gates.length-1;
+  const pass=()=>{
+    eg.gatesPassed=eg.gatesPassed||{};
+    eg.gatesPassed[gateId]={at:now(),by:CUR.name};
+    eg.updatedAt=now();
+    const key=uid('k');
+    const logData={eventId:eg.eventId,eventGuestId:eg.id,action:'gate_pass',gateId,
+      previousStatus:eg.arrivalStatus,nextStatus:eg.arrivalStatus,previousTime:null,nextTime:now(),reason:'',idempotencyKey:key};
+    if(!isOnline()){const log=makeLog(logData);S.queue.push({egId:eg.id,idempotencyKey:key,log});save(['eventGuests','queue'],{silent:true})}
+    else{pushCheckinLog(logData);save(['eventGuests','checkinLogs'])}
+    audit('eventGuest',eg.id,'gate_pass',null,{gateId},eg.eventId);
+  };
+  // 마지막 게이트는 체크인이 실제로 처리될 때만 통과로 기록(VVIP 확인창에서 취소하면 기록 없음)
+  const go=()=>{if(isLast)doCheckin(egId,pass);else{pass();rerender()}};
+  const skipped=gates.slice(0,Math.max(idx,0)).filter(g=>!eg.gatesPassed[g.id]);
+  if(skipped.length){
+    openConfirm('게이트 건너뜀 확인',
+      `앞 게이트 <b>${skipped.map(g=>esc(g.name)).join(', ')}</b> 통과 기록이 없습니다.<br>그래도 <b>${esc(gates[idx].name)}</b> 통과로 처리할까요?`,
+      '통과 처리',go);
+  }else go();
 }
 
 // ── 16. VVIP 영접 관리 ──────────────────────────────
@@ -1377,7 +1411,9 @@ function autoAssignSeats(evId){
   const ev=byId(S.events,evId);if(!ev||!ev.seatConfig)return{placed:0,overflow:0};
   const{cols,rows,aisleRows=[],aisleCols=[]}=ev.seatConfig;
   const coords=seatPriorityCoords(cols,rows,aisleRows,aisleCols);
-  const order=computeOrder(evId).map(o=>o.eg);
+  const all=computeOrder(evId).map(o=>o.eg);
+  all.filter(eg=>eg.arrivalStatus==='absent').forEach(eg=>{eg.seat=null});
+  const order=all.filter(eg=>eg.arrivalStatus!=='absent');
   order.forEach((eg,i)=>{eg.seat=i<coords.length?{...coords[i]}:null});
   save(['eventGuests']);
   const placed=Math.min(order.length,coords.length);
@@ -1834,9 +1870,12 @@ function openReason(title,msg,fn){REASON_FN=fn;
     [{label:'취소',cls:'btn-s',act:'close'},{label:'확인',cls:'btn-w',act:'reason-ok'}]);
   setTimeout(()=>$('reason-input')?.focus(),50);}
 function openCheckedInModal(eg){
+  const st=eg.arrivalStatus;
   openModal(`${esc(dispName(eg))} — 이미 도착 처리됨`,
-    `<p style="font-size:13.5px;line-height:1.7">도착 시각: <b>${esc(fmt(eg.checkedInAt))}</b> · 처리자: ${esc(eg.checkedInBy||'')}<br>중복 도착 처리 대신 아래에서 선택하세요.</p>`,
+    `<p style="font-size:13.5px;line-height:1.7">도착 시각: <b>${esc(fmt(eg.checkedInAt))}</b> · 처리자: ${esc(eg.checkedInBy||'')} · 현재: <b>${esc(ARR_LABEL[st])}</b><br>중복 도착 처리 대신 아래에서 선택하세요.</p>`,
     [{label:'닫기',cls:'btn-s',act:'close'},
+     ...(can('checkin.do')&&STAGE_FROM.seated.includes(st)?[{label:'착석 처리',cls:'btn-p',act:'stage-seated'}]:[]),
+     ...(can('checkin.do')&&STAGE_FROM.departed.includes(st)?[{label:'퇴장 처리',cls:'btn-w',act:'stage-departed'}]:[]),
      ...(can('checkin.do')?[{label:'시각 수정',cls:'btn-w',act:'time-edit'}]:[]),
      ...(can('checkin.undo')||can('checkin.admin')?[{label:'체크인 취소',cls:'btn-d',act:'undo-edit'}]:[])]);
   EG_EDIT=eg.id;
@@ -2015,7 +2054,10 @@ function openEgModal(id){
       <button type="button" class="btn btn-g btn-xs" data-act="eg-comp-add" style="margin-top:6px">+ 수행원 추가</button></div>
     <div class="fl fg-full"><label>공개 메모</label><input class="inp" id="eg-npub" value="${esc(eg.publicNote||'')}"></div>
   </div>`;
-  openModal('내빈 행사 설정',body,[{label:'취소',cls:'btn-s',act:'close'},{label:'저장',cls:'btn-p',act:'save-eg'}]);
+  openModal('내빈 행사 설정',body,[
+    ...(can('checkin.do')&&STAGE_FROM.absent.includes(eg.arrivalStatus)?[{label:'불참 처리',cls:'btn-d',act:'stage-absent'}]:[]),
+    ...(can('checkin.do')&&eg.arrivalStatus==='absent'?[{label:'불참 해제',cls:'btn-w',act:'stage-unabsent'}]:[]),
+    {label:'취소',cls:'btn-s',act:'close'},{label:'저장',cls:'btn-p',act:'save-eg'}]);
 }
 function saveEg(){
   const eg=byId(S.eventGuests,EG_EDIT);if(!eg)return;const before={...eg};
@@ -2027,7 +2069,7 @@ function saveEg(){
   eg.receptionUserIds=[...document.querySelectorAll('.eg-rec-cb:checked')].map(i=>i.value);
   eg.publicNote=$('eg-npub').value.trim();
   eg.companions=sanitizeCompanions(EG_COMP);
-  const t=$('eg-eta').value;if(t){const d=new Date();const[h,m]=t.split(':');d.setHours(+h,+m,0,0);eg.expectedArrivalAt=d.toISOString()}
+  const t=$('eg-eta').value;eg.expectedArrivalAt=t?isoAt(byId(S.events,eg.eventId)?.date,t):null;
   eg.version=(eg.version||1)+1;eg.updatedAt=now();
   save(['eventGuests']);audit('eventGuest',eg.id,'update',{att:before.attendanceType,intro:before.introType,comp:(before.companions||[]).length},{att:eg.attendanceType,intro:eg.introType,comp:eg.companions.length},eg.eventId);
   closeModal();toast('내빈 설정 저장','ok');rerender();
@@ -2129,8 +2171,8 @@ function openTimeEdit(egId){const eg=byId(S.eventGuests,egId);if(!eg)return;EG_E
     `<div class="fl"><label>도착시각</label><input class="inp" type="time" id="te-time" value="${eg.checkedInAt?fmt(eg.checkedInAt):''}"></div>`,
     [{label:'취소',cls:'btn-s',act:'close'},{label:'저장',cls:'btn-p',act:'save-time'}]);}
 function saveTime(){const eg=byId(S.eventGuests,EG_EDIT);if(!eg)return;const t=$('te-time').value;if(!t)return;
-  const prev=eg.checkedInAt;const d=new Date();const[h,m]=t.split(':');d.setHours(+h,+m,0,0);
-  eg.checkedInAt=d.toISOString();eg.version=(eg.version||1)+1;eg.updatedAt=now();
+  const prev=eg.checkedInAt;
+  eg.checkedInAt=isoAt(prev?localDate(prev):byId(S.events,eg.eventId)?.date,t);eg.version=(eg.version||1)+1;eg.updatedAt=now();
   pushCheckinLog({eventId:eg.eventId,eventGuestId:eg.id,action:'time_edit',previousStatus:eg.arrivalStatus,nextStatus:eg.arrivalStatus,previousTime:prev,nextTime:eg.checkedInAt,reason:'',idempotencyKey:uid('k')});
   save(['eventGuests','checkinLogs']);audit('eventGuest',eg.id,'time_edit',{t:prev},{t:eg.checkedInAt},eg.eventId);
   closeModal();toast('도착시각 수정','ok');rerender();}
@@ -2220,6 +2262,10 @@ const ACTS={
   'save-rec':()=>saveRec(),
   'save-time':()=>saveTime(),
   'time-edit':()=>{const id=EG_EDIT;closeModal();openTimeEdit(id)},
+  'stage-seated':()=>{const id=EG_EDIT;closeModal();setStage(id,'seated')},
+  'stage-departed':()=>{const id=EG_EDIT;closeModal();setStage(id,'departed')},
+  'stage-absent':()=>{const id=EG_EDIT;closeModal();setStage(id,'absent')},
+  'stage-unabsent':()=>{const id=EG_EDIT;closeModal();setStage(id,'expected')},
   'undo-edit':()=>{const id=EG_EDIT;closeModal();if(can('checkin.admin'))adminUndo(id);else undoCheckin(id,'현장 취소')},
 };
 document.addEventListener('click',e=>{

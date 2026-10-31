@@ -30,7 +30,7 @@ let pass=0,fail=0;const ok=(n,c)=>{c?(pass++,console.log('  ✓',n)):(fail++,con
 // ── 로직 + 렌더 ──
 store.clear();MOCK_QS={};
 const sb=makeSandbox(false);
-vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},setShowPhoto:b=>{CI_SHOW_PHOTO=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception,renderLogin,seatPriorityCoords,autoAssignSeats,swapSeats,moveSeatTo,renderSeating,addGate,removeGate,sanitizeGates,toggleGatePass,renderCI,resolvePhotoField,applySeatResize,setSeatEditMode:b=>{SEAT_EDIT_MODE=b},seatTapAction};`,sb);
+vm.runInContext(js+`;globalThis.__API={esc,choseong,recScore,computeOrder,commitAssign,doCheckin,undoCheckin,flushQueue,isArrived,guestOf,S,byId,uid,PAGES,ROLES,ROLE_PERMS,setASGN:id=>{ASGN_EV=id},setCUR:u=>{CUR=u},setOffline:b=>{DEMO_OFFLINE=b},setShowPhoto:b=>{CI_SHOW_PHOTO=b},reportData,riskRadar,qualityIssues,snapshotOrder,buildScriptText,fmtDuration,arrivalDistChart,receptionDuration,crossEventStats,sparkline,renderStatsTrend,addCompanion,removeCompanion,sanitizeCompanions,renderReception,renderLogin,seatPriorityCoords,autoAssignSeats,swapSeats,moveSeatTo,renderSeating,addGate,removeGate,sanitizeGates,toggleGatePass,renderCI,resolvePhotoField,applySeatResize,setSeatEditMode:b=>{SEAT_EDIT_MODE=b},seatTapAction,setStage,isoAt,localDate,confirmOk:()=>{const f=CONFIRM_FN;CONFIRM_FN=null;f&&f()},confirmCancel:()=>{CONFIRM_FN=null},confirmPending:()=>!!CONFIRM_FN};`,sb);
 const A=sb.__API;A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
 const evId=A.S.events[0].id;
 
@@ -228,7 +228,9 @@ if(gateGuest){
   A.toggleGatePass(gateGuest.id,'g1');
   ok('같은 게이트 다시 누르면 취소됨',!gateGuest.gatesPassed.g1);
   A.toggleGatePass(gateGuest.id,'g3');
-  ok('마지막 게이트를 누르면 doCheckin이 실행되어 도착 처리됨(다른 게이트 안 눌러도)',gateGuest.arrivalStatus==='arrived');
+  ok('앞 게이트를 건너뛰면 확인창부터 뜨고 아직 도착 처리 안 됨',A.confirmPending()&&gateGuest.arrivalStatus==='expected'&&!gateGuest.gatesPassed.g3);
+  A.confirmOk();
+  ok('확인하면 마지막 게이트로 도착 처리됨',gateGuest.arrivalStatus==='arrived');
   ok('마지막 게이트 자체도 gatesPassed에 기록됨',gateGuest.gatesPassed.g3);
 }else{
   ok('게이트 테스트용 미도착 내빈 확보',false);
@@ -317,6 +319,48 @@ ok('선택된 자리를 다시 탭 → deselect',A.seatTapAction('egA','egA',1,1
 ok('선택 있음 + 다른 사람 자리 탭 → swap',JSON.stringify(A.seatTapAction('egA','egB',2,2))===JSON.stringify({action:'swap',a:'egA',b:'egB'}));
 ok('선택 있음 + 빈 자리 탭 → move',JSON.stringify(A.seatTapAction('egA',null,3,3))===JSON.stringify({action:'move',egId:'egA',row:3,col:3}));
 ok('선택 있음 + 복도 칸(행/열 정보 없음) 탭 → none(선택 유지)',A.seatTapAction('egA',null,null,null).action==='none');
+
+// ── 시연 품질 개선: 날짜·진행 단계·게이트 ──
+console.log('\n[예정·도착시각 날짜 = 행사일 기준]');
+{const iso=A.isoAt('2026-12-03','14:30');const d=new Date(iso);
+ ok('행사일 날짜로 계산',A.localDate(iso)==='2026-12-03'&&d.getHours()===14&&d.getMinutes()===30);
+ ok('기준일 없으면 오늘 날짜',A.localDate(A.isoAt(undefined,'09:05'))===A.localDate(new Date().toISOString()));
+ ok('형식 틀린 기준일도 오늘로 처리',A.localDate(A.isoAt('12/03','09:05'))===A.localDate(new Date().toISOString()));}
+
+console.log('\n[진행 단계 전환 — 착석·퇴장·불참]');
+A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
+{const pool=A.S.eventGuests.filter(e=>e.eventId===gateEvId&&e.arrivalStatus==='expected'&&e.protocolLevel!=='VVIP'&&uniqueName(e));
+ const sg=pool[0],ab=pool[1];
+ if(sg&&ab){
+  A.setStage(sg.id,'seated');
+  ok('미도착 내빈은 바로 착석 처리 불가',sg.arrivalStatus==='expected');
+  A.doCheckin(sg.id);A.setStage(sg.id,'seated');
+  ok('도착 후 착석 처리',sg.arrivalStatus==='seated'&&!!sg.seatedAt);
+  A.setStage(sg.id,'departed');
+  ok('착석 후 퇴장 처리',sg.arrivalStatus==='departed');
+  ok('착석·퇴장 이력이 체크인 로그에 남음',['seated','departed'].every(a=>A.S.checkinLogs.some(l=>l.eventGuestId===sg.id&&l.action===a)));
+  A.setStage(ab.id,'absent');
+  ok('미도착 내빈 불참 처리',ab.arrivalStatus==='absent');
+  A.autoAssignSeats(gateEvId);
+  ok('불참자는 자동 좌석배치에서 제외',ab.seat===null);
+  ok('불참자는 위험 레이더 경보 대상 아님',!A.riskRadar(gateEvId).some(r=>r.msg.includes(A.guestOf(ab).name)));
+  A.setStage(ab.id,'expected');
+  ok('불참 해제하면 도착 예정으로 복귀',ab.arrivalStatus==='expected');
+  A.setCUR({id:'u9',role:'viewer',name:'조회자',assignedEventIds:[]});
+  A.setStage(ab.id,'absent');
+  ok('조회자는 단계 전환 불가',ab.arrivalStatus==='expected');
+  A.setCUR({id:'u1',role:'chief',name:'검증자',assignedEventIds:[]});
+ }else ok('단계 전환 시험용 내빈 확보',false);}
+
+console.log('\n[게이트 — VVIP 확인창 취소 시 기록 없음]');
+{const vg=A.S.eventGuests.find(e=>e.eventId===gateEvId&&e.protocolLevel==='VVIP'&&e.arrivalStatus==='expected');
+ if(vg){gateEv.gates=[{id:'g1',name:'주차장 입장'},{id:'g2',name:'건물 입장'},{id:'g3',name:'행사장 입장'}];gateEv.gatesEnabled=true;
+  vg.gatesPassed={g1:{at:'x',by:'x'},g2:{at:'x',by:'x'}};
+  A.toggleGatePass(vg.id,'g3');
+  ok('앞 게이트를 다 통과했으면 건너뜀 경고 없이 VVIP 확인창',A.confirmPending()&&!vg.gatesPassed.g3);
+  A.confirmCancel();
+  ok('VVIP 확인창을 취소하면 마지막 게이트·도착 모두 미기록',!vg.gatesPassed.g3&&vg.arrivalStatus==='expected');
+ }else ok('VVIP 게이트 시험용 내빈 확보',false);}
 
 // ── 클라우드 경로 ──
 console.log('\n[클라우드 동기화 경로]');
